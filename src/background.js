@@ -24,7 +24,9 @@ function elapsedSeconds(s) {
   if (s.state === 'Started' && s.startDateTime) secs += Math.max(0, (Date.now() - Date.parse(s.startDateTime)) / 1000);
   return Math.floor(secs);
 }
-const active = (s) => !!(s && s.work && s.state !== 'Stopped');
+// A blank timer (no work item yet) still counts as running.
+const active = (s) => !!(s && s.state && s.state !== 'Stopped');
+const pendingFinish = async () => (await chrome.storage.session.get('pendingFinish')).pendingFinish || null;
 
 // Badges fit about four characters: 25m, 1h05, 12h.
 function elapsedText(s) {
@@ -35,31 +37,35 @@ function elapsedText(s) {
 }
 
 // badgeWhere: 'everywhere', 'away' (every site except Karbon, which shows its own timer), or 'never'.
-function badgeFor(s, cfg) {
+function badgeFor(s, cfg, waiting) {
   if (cfg.badgeWhere === 'never') return { text: '' };
+  // A timer you stopped that still needs its details: "!" until it is finished.
+  if (waiting && active(s)) return { text: '!', color: COLORS.long, dark: true };
   if (!active(s)) return cfg.showIdleBadge ? { text: 'off', color: COLORS.none } : { text: '' };
   if (s.state === 'Paused') return { text: 'II', color: COLORS.paused };
   const long = cfg.longTimerHours > 0 && elapsedSeconds(s) >= cfg.longTimerHours * 3600;
   return { text: elapsedText(s), color: long ? COLORS.long : COLORS.run, dark: long };
 }
 
-function tooltip(s) {
+function tooltip(s, waiting) {
   if (!active(s)) return 'Karbon timer: no timer running';
+  if (waiting) return 'Karbon timer paused: choose a work item to finish saving it';
   const m = Math.floor(elapsedSeconds(s) / 60);
   const time = m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
   const what = [s.title, s.client].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ');
-  return `Karbon timer ${s.state === 'Paused' ? 'paused' : 'running'}: ${time}${what ? ` on ${what}` : ''}`;
+  const on = what ? ` on ${what}` : s.work ? '' : ', no work item yet';
+  return `Karbon timer ${s.state === 'Paused' ? 'paused' : 'running'}: ${time}${on}`;
 }
 
 async function refreshBadge() {
-  const [s, cfg] = await Promise.all([cachedState(), settings()]);
-  const b = badgeFor(s, cfg);
+  const [s, cfg, waiting] = await Promise.all([cachedState(), settings(), pendingFinish()]);
+  const b = badgeFor(s, cfg, !!waiting);
   await chrome.action.setBadgeText({ text: b.text });
   if (b.text) {
     await chrome.action.setBadgeBackgroundColor({ color: b.color });
     if (chrome.action.setBadgeTextColor) await chrome.action.setBadgeTextColor({ color: b.dark ? '#1f2933' : '#ffffff' });
   }
-  await chrome.action.setTitle({ title: tooltip(s) });
+  await chrome.action.setTitle({ title: tooltip(s, !!waiting) });
   // Karbon tabs get their own badge: blank in "away" mode (Karbon shows its own timer), the same badge otherwise.
   const onKarbon = cfg.badgeWhere === 'everywhere' ? b.text : '';
   const tabs = await chrome.tabs.query({ url: `${KARBON}*` });
@@ -93,8 +99,10 @@ async function checkLongTimer(s, cfg) {
 
 chrome.notifications.onClicked.addListener(async (id) => {
   chrome.notifications.clear(id);
+  if (id.startsWith('finish:')) return openFinishWindow();
   const s = await cachedState();
-  if (s) openWork({ tenant: s.tenant, work: s.work, linkType: s.linkType });
+  if (s && s.work) openWork({ tenant: s.tenant, work: s.work, linkType: s.linkType });
+  else if (s) openFinishWindow();
 });
 
 // ---- Karbon tab routing ----
@@ -128,7 +136,7 @@ async function openBackgroundTabOnce() {
 }
 
 // Actions may open Karbon in the background; reads never do.
-const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'appendNote', 'autoPause', 'autoResume', 'search', 'recents']);
+const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'autoPause', 'autoResume', 'search', 'recents']);
 
 // Error codes let the popup offer the right fix: NO_TAB opens Karbon, NOT_READY reloads it.
 async function toKarbon(cmd, args) {
@@ -157,6 +165,55 @@ async function openWork({ tenant, work, linkType }) {
   }
 }
 
+// ---- Finishing a timer that is missing details ----
+// A stop or switch that can't save yet pauses the timer and asks for the missing details.
+// pendingFinish: { note, then, thenTitle, missing, reason }. "then" is the start to run once the entry is saved.
+// ui: 'window' opens a small finish window; 'popup' means the toolbar panel shows the form itself.
+async function promptFinish({ note = null, then = null, thenTitle = null, missing = ['work'], reason = 'stop', ui = 'window' }) {
+  await toKarbon('autoPause', { note: null });
+  await chrome.storage.session.set({ pendingFinish: { note, then, thenTitle, missing, reason, at: Date.now() } });
+  await refreshBadge();
+  if (ui === 'window') await openFinishWindow();
+  return { ok: true };
+}
+
+async function openFinishWindow() {
+  const { finishWindowId } = await chrome.storage.session.get('finishWindowId');
+  if (finishWindowId) {
+    try {
+      await chrome.windows.update(finishWindowId, { focused: true, drawAttention: true });
+      return;
+    } catch {}
+  }
+  const w = await chrome.windows.create({ url: 'complete.html?mode=window', type: 'popup', width: 400, height: 640, focused: true });
+  await chrome.storage.session.set({ finishWindowId: w.id });
+}
+
+chrome.windows.onRemoved.addListener(async (id) => {
+  const { finishWindowId } = await chrome.storage.session.get('finishWindowId');
+  if (finishWindowId === id) await chrome.storage.session.remove('finishWindowId');
+});
+
+// Saves the paused timer with the details from the finish form, then runs any pending switch.
+async function finishTimer({ fill }) {
+  const p = (await pendingFinish()) || {};
+  const r = await toKarbon('stopAndSave', { note: p.note || null, fill, interactive: true });
+  if (!r || !r.ok) return r;
+  if (r.result && r.result.needsCompletion) return r;
+  await chrome.storage.session.remove('pendingFinish');
+  let started = null;
+  if (p.then) started = await toKarbon('start', { ...p.then, interactive: true });
+  await refreshBadge();
+  return { ok: true, result: { ...r.result, started } };
+}
+
+async function discardTimer() {
+  const r = await toKarbon('discard', {});
+  if (r && r.ok) await chrome.storage.session.remove('pendingFinish');
+  await refreshBadge();
+  return r;
+}
+
 // ---- Messages ----
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'state') {
@@ -175,6 +232,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     openWork(msg).then(() => sendResponse({ ok: true }));
     return true;
   }
+  if (msg.type === 'promptFinish') {
+    promptFinish(msg).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'getPending') {
+    pendingFinish().then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'finishTimer') {
+    finishTimer(msg).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'cancelFinish') {
+    chrome.storage.session.remove('pendingFinish').then(refreshBadge).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg.type === 'discardTimer') {
+    discardTimer().then(sendResponse);
+    return true;
+  }
   if (msg.type === 'hasKarbonTab') {
     karbonTab().then((t) => sendResponse(!!t));
     return true;
@@ -191,15 +268,22 @@ async function handleState(state) {
   // Learn the default role and task type from any timer Karbon starts.
   if (state && state.work && state.roleKey && state.taskTypeKey) Object.assign(keep, { roleKey: state.roleKey, taskTypeKey: state.taskTypeKey });
   if (Object.keys(keep).length) await chrome.storage.local.set(keep);
+  // Saved or discarded somewhere else (Karbon itself, another device): nothing is left to finish.
+  if (state && state.state === 'Stopped') await chrome.storage.session.remove('pendingFinish');
   await refreshBadge();
 }
 
-// ---- Keyboard shortcut: pause or resume from anywhere ----
+// ---- Keyboard shortcut: start, pause, or resume from anywhere ----
+// With no timer running, it starts a blank timer with your last-used role and task type.
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'toggle-timer') return;
   const cfg = await settings();
   const s = await cachedState();
-  if (!active(s)) return;
+  if (!active(s)) {
+    const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
+    await toKarbon('start', { roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: KTNotes.note('manualStart', cfg.noteLevel) });
+    return;
+  }
   if (s.state === 'Started') await toKarbon('pause', { note: KTNotes.note('manualPause', cfg.noteLevel) });
   else await toKarbon('resume', { note: KTNotes.note('manualResume', cfg.noteLevel) });
 });
@@ -249,14 +333,29 @@ async function onDayEnd() {
   const s = await cachedState();
   if (!active(s)) return;
   if (s.state === 'Paused') {
-    await toKarbon('stopAndSave', { note: KTNotes.note('dayEndStopPaused', cfg.noteLevel) });
+    const r = await toKarbon('stopAndSave', { note: KTNotes.note('dayEndStopPaused', cfg.noteLevel) });
+    if (r && r.ok && r.result && r.result.needsCompletion) await dayEndNeedsFinish(r.result, cfg);
     return;
   }
   const r = await toKarbon('stopAndSave', { note: KTNotes.note('dayEndStop', cfg.noteLevel) });
+  if (r && r.ok && r.result && r.result.needsCompletion) return dayEndNeedsFinish(r.result, cfg);
   if (!r || !r.ok || !r.result || !r.result.saved) return;
   const w = r.result.was;
   await chrome.storage.local.set({ restartAfterMidnight: { workKey: w.work, linkType: w.linkType, roleKey: w.roleKey, taskTypeKey: w.taskTypeKey } });
   chrome.alarms.create('dayStart', { when: nextAt(0, 0, 30) });
+}
+
+// A timer without a work item can't be saved unattended: pause it, keep its date, and ask in the morning.
+async function dayEndNeedsFinish(result, cfg) {
+  await promptFinish({ note: KTNotes.note('dayEndStopPaused', cfg.noteLevel), missing: result.missing, reason: 'dayEnd', ui: 'none' });
+  chrome.notifications.create(`finish:${Date.now()}`, {
+    type: 'basic',
+    iconUrl: 'icons/icon128.png',
+    title: 'Timer paused at the end of the day',
+    message: 'It has no work item yet, so it could not be saved. Click to finish it. The time stays on the day it was recorded.',
+    priority: 1,
+    requireInteraction: true,
+  });
 }
 
 async function onDayStart() {

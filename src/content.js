@@ -125,6 +125,8 @@
     const seconds = isWork ? s.workStartSeconds : s.contactStartSeconds;
     const canStart = isWork ? s.autoStartWork : s.autoStartContacts;
     // Contacts only take over a running timer when contact auto-start is on.
+    // A running timer with no work item can't be saved on its own, so ask before switching.
+    if (running && !state.work && s.autoSwitch && (isWork || canStart)) return offerFinish(item, s);
     if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, seconds);
     if (!running && canStart) return autoAct(item, s, false, seconds);
     if (!running && isWork && s.remindNoTimer && !dismissed.has(key)) {
@@ -135,6 +137,30 @@
   async function startArgs(item, extra) {
     const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
     return { workKey: item.key, linkType: item.linkType, roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, ...extra };
+  }
+
+  // Karbon's tab title starts with the item's name.
+  const pageTitle = () => (document.title || '').split(' | ')[0].replace(/ - [^-]+$/, '').trim() || null;
+
+  // The running timer needs details (usually a work item) before it can be saved. The background
+  // pauses it and opens the finish window; the switch to this item runs once the entry is saved.
+  async function askToFinish(item, s, startArgsForItem) {
+    await chrome.runtime.sendMessage({
+      type: 'promptFinish', ui: 'window', reason: 'switch',
+      note: KTNotes.note('switchedAway', s.noteLevel),
+      then: startArgsForItem, thenTitle: pageTitle(),
+    });
+  }
+
+  async function offerFinish(item, s) {
+    const kind = KIND[item.linkType];
+    const go = await showToast({
+      text: 'Your running timer has no work item yet. Finish it to switch the timer here.',
+      seconds: 20, mode: 'confirm', confirmLabel: 'Finish and switch',
+    });
+    if (!go || !here(item.key)) return log('finish offer dismissed');
+    await askToFinish(item, s, await startArgs(item, { note: KTNotes.note('switchedIn', s.noteLevel) }));
+    log(`finish prompt opened for a switch to this ${kind}`);
   }
 
   async function autoAct(item, s, switching, seconds) {
@@ -148,7 +174,12 @@
       ? { stopNote: KTNotes.note('switchedAway', s.noteLevel), note: KTNotes.note('switchedIn', s.noteLevel) }
       : { note: KTNotes.note('autoStart', s.noteLevel, { kind }) };
     try {
-      await pageCall('start', await startArgs(item, extra));
+      const args = await startArgs(item, { ...extra, interactive: true });
+      const r = await pageCall('start', args);
+      if (r && r.needsCompletion) {
+        const { stopNote, ...then } = args;
+        await chrome.runtime.sendMessage({ type: 'promptFinish', ui: 'window', reason: 'switch', note: stopNote, then, thenTitle: pageTitle(), missing: r.missing });
+      }
     } catch (e) {
       showToast({ text: e.message, seconds: 8, mode: 'info' });
     }

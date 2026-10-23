@@ -172,33 +172,38 @@
       entity: s.timeTrackingEntity || null,
       workOnly: s.timeTrackingEntity === 'Work',
       notesRequired: !!s.isNotesRequired,
+      roleRequired: !!s.isActorRequired,
+      taskTypeRequired: !!s.isTaskTypeRequired,
     };
     post({ event: 'timeSettings', settings: K.timeCfg });
     return K.timeCfg;
   }
 
+  // A timer can start blank: no work item, contact, role, or task type. Karbon allows that,
+  // and the missing details are collected when the timer is stopped or switched.
   // description: your own text for the new entry. note: a stamped activity note added after it.
   // stopNote: written on the entry being saved, when this start switches away from another timer.
-  async function start({ workKey, linkType = 'WorkItem', roleKey, taskTypeKey, description, note, stopNote }) {
-    if (linkType !== 'WorkItem') {
+  // interactive: someone is there to answer the finish prompt, so a required note is asked for, not filled in.
+  // Returns the new timer, or { needsCompletion, missing, state } when the running timer can't be saved yet.
+  async function start({ workKey = null, linkType = 'WorkItem', roleKey, taskTypeKey, description, note, stopNote, interactive = false }) {
+    workKey = workKey || null;
+    if (workKey && linkType !== 'WorkItem') {
       const cfg = await timeSettings().catch(() => null);
       if (cfg && cfg.workOnly) throw new Error('Your firm books time to work items only, so timers cannot start on a contact.');
     }
     const cur = await getState();
     if (cur.stopwatchState !== 'Stopped') {
-      if (cur.entityPermaKey === workKey) {
+      if ((cur.entityPermaKey || null) === workKey) {
         return cur.stopwatchState === 'Paused' ? resume({ note }) : cur;
       }
-      await stopAndSave({ note: stopNote });
-    }
-    if (!roleKey || !taskTypeKey) {
-      throw new Error('Start one timer in Karbon by hand first, so the extension learns your default role and task type.');
+      const r = await stopAndSave({ note: stopNote, interactive });
+      if (r.needsCompletion) return r;
     }
     const fresh = K.sw;
     const s = {
-      entityPermaKey: workKey, entityLinkType: linkType, workItemTitle: null, clientName: null,
-      actorPermaKey: roleKey, actorName: null, actorAvatarColorId: null,
-      taskTypePermaKey: taskTypeKey, taskTypeName: null, taskTypeBillable: false,
+      entityPermaKey: workKey, entityLinkType: workKey ? linkType || 'WorkItem' : null, workItemTitle: null, clientName: null,
+      actorPermaKey: roleKey || null, actorName: null, actorAvatarColorId: null,
+      taskTypePermaKey: taskTypeKey || null, taskTypeName: null, taskTypeBillable: false,
       customFields: [], autoDescription: null, isAutoDescriptionOverridden: false, description: null,
       stopwatchState: 'Stopped', currentDateTime: null,
       initialStartDateTime: fresh.initialStartDateTime, startDateTime: fresh.startDateTime,
@@ -247,35 +252,67 @@
     return { resumed: true };
   }
 
-  async function stopAndSave({ note } = {}) {
+  // Karbon stores a "None" role or task type as no key.
+  const realKey = (k) => (k && k !== 'NONE' ? k : null);
+
+  // What a timer still needs before Karbon will save it: a work item or contact always, plus a role,
+  // task type, or note when the firm requires them. userText is the description you wrote, without stamps.
+  function missingFor(e, userText, cfg, interactive) {
+    const missing = [];
+    if (!e.entityPermaKey) missing.push('work');
+    if (cfg && cfg.roleRequired && !realKey(e.actorPermaKey)) missing.push('role');
+    if (cfg && cfg.taskTypeRequired && !realKey(e.taskTypePermaKey)) missing.push('taskType');
+    if (cfg && cfg.notesRequired && interactive && !String(userText || '').trim()) missing.push('notes');
+    return missing;
+  }
+
+  // fill: details from the finish prompt { workKey, linkType, roleKey, taskTypeKey, description }.
+  // They go straight into the saved entry; the running stopwatch is never edited.
+  // When something required is missing, nothing is saved and the timer is left as it is.
+  async function stopAndSave({ note, fill = null, interactive = false } = {}) {
     let cur = await getState();
     if (cur.stopwatchState === 'Stopped') return { saved: false };
+    const f = fill || {};
+    const pick = (k, curVal) => (f[k] !== undefined ? f[k] : curVal);
+    const e = {
+      entityPermaKey: pick('workKey', cur.entityPermaKey) || null,
+      entityLinkType: f.workKey ? f.linkType || 'WorkItem' : cur.entityLinkType || 'WorkItem',
+      actorPermaKey: realKey(pick('roleKey', cur.actorPermaKey)),
+      taskTypePermaKey: realKey(pick('taskTypeKey', cur.taskTypePermaKey)),
+    };
+    const userText = pick('description', cur.description) || '';
+    const cfg = await timeSettings().catch(() => null);
+    const missing = missingFor(e, userText, cfg, interactive);
+    if (missing.length) {
+      log('cannot save yet; missing', missing);
+      return { saved: false, needsCompletion: true, missing, state: summarize(cur) };
+    }
     const was = summarize(cur);
     if (cur.stopwatchState === 'Started') cur = await putAction('pause');
     // Karbon always rounds a timer up to the next whole minute (1:01 saves as 2 minutes).
     const minutes = Math.max(1, Math.ceil((cur.recordedSeconds || 0) / 60));
-    // Firms that require notes reject an empty description, so add a neutral line when there is none.
-    let description = joinNote(cur.description, note);
-    if (!description.trim()) {
-      const cfg = await timeSettings().catch(() => null);
-      if (cfg && cfg.notesRequired) description = 'Time recorded with the Karbon timer.';
-    }
+    // Firms that require notes reject an empty description. Unattended saves (end of day) add a neutral line.
+    let description = joinNote(userText, note);
+    if (!description.trim() && cfg && cfg.notesRequired) description = 'Time recorded with the Karbon timer.';
     const entry = {
-      action: null, actorAvatarColorId: null, actorName: null, actorPermaKey: cur.actorPermaKey,
+      action: null, actorAvatarColorId: null, actorName: null, actorPermaKey: e.actorPermaKey,
       adjustedValue: null, billedStatus: null, billedValue: null, clientName: null,
       description, entityBillingType: null,
-      entityPermaKey: cur.entityPermaKey, entityLinkType: cur.entityLinkType || 'WorkItem',
+      entityPermaKey: e.entityPermaKey, entityLinkType: e.entityLinkType,
       entryType: 'Timer', externalSystem: null, hourlyRate: null, isImportedTime: false,
       isOnApprovedInvoice: false, minutes, privacyLevel: null,
       startDateTime: localDate(cur.initialStartDateTime), taskTypeBillable: false, taskTypeName: null,
-      taskTypePermaKey: cur.taskTypePermaKey, timeSheetStatus: null, timeType: 'Daily', totalCost: null,
+      taskTypePermaKey: e.taskTypePermaKey, timeSheetStatus: null, timeType: 'Daily', totalCost: null,
       userHasPrivacyAccess: false, userHasViewAccess: false, userProfileAvatarColorId: null,
       userProfilePermaKey: K.user, userProfileName: null, workItemTitle: null,
       invoicePermaKey: null, isInvoiceDeleted: false, timeSheetPermaKey: null, orgUnitPublicKey: null,
     };
     const saved = await call('POST', `/time/api/${K.tenant}/timeEntries`, { timeEntry: entry });
     await putAction('Confirm');
-    return { saved: true, minutes, was, entryId: saved && saved.timeEntry && saved.timeEntry.id };
+    return {
+      saved: true, minutes, entryId: saved && saved.timeEntry && saved.timeEntry.id,
+      was: { ...was, work: e.entityPermaKey, linkType: e.entityLinkType, roleKey: e.actorPermaKey, taskTypeKey: e.taskTypePermaKey },
+    };
   }
 
   async function discard() {

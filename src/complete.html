@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finish time entry: Reckonry Timer for Karbon</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body.window { width:auto; max-width:440px; margin:0 auto; }
+    #elapsedBig { font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; }
+    .fixed { border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
+    .fixed .t { font-weight:600; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="heading" tabindex="-1">Finish this time entry</h1>
+    <span id="pill" class="pill paused">Paused</span>
+  </header>
+
+  <div class="banner">
+    <p id="elapsedBig" aria-hidden="true"></p>
+    <p id="why"></p>
+  </div>
+
+  <form id="finish" novalidate>
+    <label for="q" class="field">Work <span id="workReq" class="req"></span></label>
+    <div id="workFixed" class="fixed" hidden><span class="t" id="workFixedTitle"></span></div>
+    <div id="chosen" class="chosen" hidden>
+      <div class="grow"><span id="chosenTitle" class="t"></span><span id="chosenSub" class="s"></span></div>
+      <button id="change" type="button" class="linklike">Change</button>
+    </div>
+    <div id="picker">
+      <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="workErr">
+      <div id="resultsHead" class="muted" style="margin-top:6px"></div>
+      <ul class="items" id="results" aria-live="polite"></ul>
+    </div>
+    <p id="workErr" class="err" hidden></p>
+
+    <label for="role" class="field">Role <span id="roleReq" class="req"></span></label>
+    <select id="role" aria-describedby="roleErr"></select>
+    <p id="roleErr" class="err" hidden></p>
+
+    <label for="taskType" class="field">Task type <span id="taskTypeReq" class="req"></span></label>
+    <select id="taskType" aria-describedby="taskTypeErr"></select>
+    <p id="taskTypeErr" class="err" hidden></p>
+
+    <label for="desc" class="field">Notes <span id="notesReq" class="req"></span></label>
+    <textarea id="desc" rows="3" aria-describedby="notesErr"></textarea>
+    <p id="notesErr" class="err" hidden></p>
+
+    <div class="actions">
+      <button id="save" type="submit" class="btn primary">Save time entry</button>
+      <button id="keep" type="button" class="btn">Keep paused</button>
+      <button id="discard" type="button" class="btn danger">Discard</button>
+    </div>
+  </form>
+
+  <p id="msg" role="status" aria-live="polite"></p>
+</main>
+<script src="config.js"></script>
+<script src="ui.js"></script>
+<script src="complete.js"></script>
+</body>
+</html>

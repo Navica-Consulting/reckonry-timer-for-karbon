@@ -14,7 +14,6 @@ const ICON = {
   star: 'M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.2L12 16.4l-4.6 2.4.9-5.2-3.8-3.6 5.2-.8z',
 };
 
-const $ = (id) => document.getElementById(id);
 let current = null;      // timer state
 let here = null;         // the active tab, when it is a Karbon work item: { key, title }
 let defaultWork = null;  // { key, linkType, title, subtitle }
@@ -25,7 +24,8 @@ let chosen = null;       // the work item or contact picked in the Work field
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 const level = async () => (await chrome.storage.sync.get({ noteLevel: 'auto' })).noteLevel;
 const noteFor = async (event, ctx) => KTNotes.note(event, await level(), ctx);
-const isActive = (s) => !!(s && s.work && s.state !== 'Stopped');
+// A blank timer (no work item yet) still counts as running.
+const isActive = (s) => !!(s && s.state && s.state !== 'Stopped');
 
 // ---- Status line, with a fix-it link when Karbon is closed or not ready ----
 function say(text, fix) {
@@ -50,25 +50,12 @@ function sayError(r) {
   say((r && r.error) || 'Something went wrong.');
 }
 
-// ---- Small DOM helpers ----
-function el(tag, attrs = {}, ...kids) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') n.className = v;
-    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
-    else n.setAttribute(k, v);
-  }
-  n.append(...kids.filter((k) => k != null));
-  return n;
-}
-
 function iconButton(label, path, onclick) {
   const b = el('button', { type: 'button', class: 'icon small', 'aria-label': label, title: label, onclick });
   b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
   return b;
 }
 
-const TAGS = { Contact: 'contact', Organization: 'organization', ClientGroup: 'client group' };
 const workOnly = () => !!(timeCfg && timeCfg.workOnly);
 
 function itemRow(item, { lead, onStart, allowDefault = true }) {
@@ -84,17 +71,6 @@ function itemRow(item, { lead, onStart, allowDefault = true }) {
 }
 
 // ---- Rendering the current timer ----
-function elapsedSeconds(s) {
-  let secs = s.recordedSeconds || 0;
-  if (s.state === 'Started' && s.startDateTime) secs += Math.max(0, (Date.now() - Date.parse(s.startDateTime)) / 1000);
-  return Math.floor(secs);
-}
-const hms = (t) => [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60].map((n) => String(n).padStart(2, '0')).join(':');
-const spoken = (t) => {
-  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60);
-  return h ? `${h} hours ${m} minutes` : `${m} minutes`;
-};
-
 function render(s) {
   current = s;
   const act = isActive(s);
@@ -106,10 +82,15 @@ function render(s) {
   if (act) {
     // A contact timer has no work item, so the contact's name is the main line.
     const isWork = !s.linkType || s.linkType === 'WorkItem';
-    $('work').textContent = isWork ? s.title || 'Open work item' : s.client || 'Open contact';
-    if (!isWork && TAGS[s.linkType]) $('work').append(' ', el('span', { class: 'tag' }, TAGS[s.linkType]));
-    $('work').title = isWork ? 'Open this work item in Karbon' : `Open this ${TAGS[s.linkType] || 'contact'} in Karbon`;
-    $('client').textContent = isWork ? s.client || '' : '';
+    const blank = !s.work;
+    $('work').hidden = blank;
+    $('blankWork').hidden = !blank;
+    if (!blank) {
+      $('work').textContent = isWork ? s.title || 'Open work item' : s.client || 'Open contact';
+      if (!isWork && TAGS[s.linkType]) $('work').append(' ', el('span', { class: 'tag' }, TAGS[s.linkType]));
+      $('work').title = isWork ? 'Open this work item in Karbon' : `Open this ${TAGS[s.linkType] || 'contact'} in Karbon`;
+    }
+    $('client').textContent = blank ? 'You will choose a work item when you stop.' : isWork ? s.client || '' : '';
     const resumeMode = st === 'Paused';
     $('toggleIcon').setAttribute('d', resumeMode ? ICON.play : ICON.pause);
     $('toggle').setAttribute('aria-label', resumeMode ? 'Resume timer' : 'Pause timer');
@@ -127,7 +108,7 @@ function render(s) {
     if (!act) return;
     const secs = elapsedSeconds(s);
     $('elapsed').textContent = hms(secs);
-    $('timer').setAttribute('aria-label', `Timer ${st === 'Paused' ? 'paused' : 'running'}, ${spoken(secs)}, on ${s.title || s.client || 'a work item'}`);
+    $('timer').setAttribute('aria-label', `Timer ${st === 'Paused' ? 'paused' : 'running'}, ${spoken(secs)}, ${s.work ? `on ${s.title || s.client || 'a work item'}` : 'no work item yet'}`);
   };
   draw();
   if (st === 'Started') tick = setInterval(draw, 1000);
@@ -169,11 +150,24 @@ $('toggle').addEventListener('click', async () => {
   else run('pause', { note: await noteFor('manualPause') }, () => 'Paused.');
 });
 
-$('stop').addEventListener('click', async () =>
-  run('stopAndSave', { note: await noteFor('manualStop') }, (r) => (r && r.saved ? `Saved a ${r.minutes} minute entry.` : 'No timer to save.')));
+// Hands off to the finish form, in this panel, when the timer needs details before it can be saved.
+async function toFinishForm({ note, then = null, thenTitle = null, missing }) {
+  await chrome.runtime.sendMessage({ type: 'promptFinish', ui: 'popup', reason: then ? 'switch' : 'stop', note, then, thenTitle, missing });
+  location.href = 'complete.html?mode=popup';
+}
+
+$('stop').addEventListener('click', async () => {
+  const note = await noteFor('manualStop');
+  say('Working.');
+  const r = await send('stopAndSave', { note, interactive: true });
+  if (!r || !r.ok) return sayError(r);
+  if (r.result && r.result.needsCompletion) return toFinishForm({ note, missing: r.result.missing });
+  say(r.result && r.result.saved ? `Saved a ${r.result.minutes} minute entry.` : 'No timer to save.');
+  refresh();
+});
 
 $('work').addEventListener('click', async () => {
-  if (!current) return;
+  if (!current || !current.work) return;
   await chrome.runtime.sendMessage({ type: 'openWork', tenant: current.tenant, work: current.work, linkType: current.linkType });
   window.close();
 });
@@ -194,7 +188,7 @@ function choose(item) {
   $('chosenSub').textContent = item.subtitle || '';
   $('chosen').hidden = false;
   $('picker').hidden = true;
-  say(`${item.title || 'Item'} chosen. Check role and task type, then start.`);
+  say(`${item.title || 'Item'} chosen. Check role and task type, then press play.`);
   $('role').focus();
 }
 
@@ -206,45 +200,47 @@ function clearChoice() {
 }
 $('change').addEventListener('click', clearChoice);
 
+// Work is optional: with nothing chosen, the timer starts blank and the details are asked for at stop.
 async function startChosen() {
   const item = chosen;
-  if (!item) { say('Choose a work item first.'); $('q').focus(); return; }
-  if (isActive(current) && current.work === item.key) return say('That item already has the timer.');
+  if (isActive(current) && (current.work || null) === (item ? item.key : null)) {
+    return say(item ? 'That item already has the timer.' : 'A timer with no work item is already running.');
+  }
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
   say('Starting. If Karbon is closed, it opens in a background tab first.');
-  const ok = await run('start', {
-    workKey: item.key, linkType: item.linkType || 'WorkItem',
+  const args = {
+    workKey: item ? item.key : null, linkType: item ? item.linkType || 'WorkItem' : null,
     roleKey: $('role').value || d.roleKey, taskTypeKey: $('taskType').value || d.taskTypeKey,
     description: $('desc').value,
-    note: await noteFor('manualStart'), stopNote: await noteFor('manualStop'),
-  }, () => `Timer started on ${item.title || 'the item'}.`);
-  if (ok) {
-    // Remember the picks as last used. Karbon reports a "None" role as no key, so the timer alone can't tell us.
-    const keep = {};
-    if ($('role').value) keep.roleKey = $('role').value;
-    if ($('taskType').value) keep.taskTypeKey = $('taskType').value;
-    await chrome.storage.local.set(keep);
-    $('desc').value = '';
-    $('q').value = '';
-    chosen = null;
-    $('chosen').hidden = true;
-    $('picker').hidden = false;
+    note: await noteFor('manualStart'),
+  };
+  const stopNote = await noteFor('manualStop');
+  const r = await send('start', { ...args, stopNote, interactive: true });
+  if (!r || !r.ok) return sayError(r);
+  await rememberPicks();
+  if (r.result && r.result.needsCompletion) {
+    return toFinishForm({ note: stopNote, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
   }
+  say(item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.');
+  $('desc').value = '';
+  $('q').value = '';
+  chosen = null;
+  $('chosen').hidden = true;
+  $('picker').hidden = false;
+  refresh();
+}
+
+// Remember the picks as last used. Karbon reports a "None" role as no key, so the timer alone can't tell us.
+async function rememberPicks() {
+  const keep = {};
+  if ($('role').value) keep.roleKey = $('role').value;
+  if ($('taskType').value) keep.taskTypeKey = $('taskType').value;
+  if (Object.keys(keep).length) await chrome.storage.local.set(keep);
 }
 $('go').addEventListener('click', startChosen);
 
 // ---- Role and task type ----
 // Filled from Karbon's lists (cached, so they show without a Karbon tab) and preset to your last-used values.
-function fillSelect(sel, list, selectedKey, noun) {
-  const opts = list.slice();
-  if (selectedKey && !opts.some((o) => o.key === selectedKey)) opts.unshift({ key: selectedKey, name: `Last used ${noun}` });
-  if (!opts.length) opts.push({ key: '', name: `Start one timer in Karbon first to set a ${noun}` });
-  sel.replaceChildren(...opts.map((o) => el('option', { value: o.key }, o.name)));
-  // Last-used value first; otherwise Karbon's own default for the firm.
-  const fallback = opts.find((o) => o.isDefault) || opts[0];
-  sel.value = selectedKey && opts.some((o) => o.key === selectedKey) ? selectedKey : fallback.key;
-}
-
 async function loadLookups() {
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey', 'lookups']);
   const paint = (lk) => {
@@ -401,6 +397,11 @@ $('feedback').addEventListener('click', async () => {
 
 // ---- Start ----
 (async () => {
+  // A stopped timer still waiting for its details: show the finish form first.
+  if (await chrome.runtime.sendMessage({ type: 'getPending' })) {
+    location.replace('complete.html?mode=popup');
+    return;
+  }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const m = tab && tab.url && tab.url.match(new RegExp(`^${KARBON.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}[^/]+/work/([A-Za-z0-9]+)`));
   if (m) here = { key: m[1], title: (tab.title || '').split(' | ')[0].replace(/ - [^-]+$/, '').trim() || 'This work item' };

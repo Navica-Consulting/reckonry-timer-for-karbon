@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reckonry Timer for Karbon (beta draft)",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Stopwatch tools for the Karbon timer: start from anywhere, auto-switch, reminders, and lock or idle pause.",
   "permissions": [
     "storage",
@@ -41,7 +41,7 @@
       "suggested_key": {
         "default": "Alt+Shift+K"
       },
-      "description": "Pause or resume the Karbon timer"
+      "description": "Start, pause, or resume the Karbon timer"
     }
   },
   "content_scripts": [
