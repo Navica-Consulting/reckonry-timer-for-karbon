@@ -63,8 +63,18 @@
     if (area === 'sync' && c.debugLog) applyDebug(c.debugLog.newValue);
   });
   // Known keys let a freshly opened background tab act before Karbon finishes loading.
-  chrome.storage.local.get(['tenant', 'user', 'base']).then((k) => {
-    if (k.tenant) pageCall('setKeys', k).catch(() => {});
+  // The page also reads the keys itself; whatever it ends up knowing is passed to the background.
+  const shareKeys = (k) => pageCall('setKeys', k || {}).then((r) => {
+    if (r && r.ready) chrome.runtime.sendMessage({ type: 'pageKeys', keys: { tenant: r.tenant, user: r.user, base: r.base } }).catch(() => {});
+    return r && r.ready;
+  }).catch(() => false);
+  chrome.storage.local.get(['tenant', 'user', 'base']).then(async (k) => {
+    if (await shareKeys(k.tenant ? k : null)) return;
+    // Karbon's own session data appears once the app has booted; check again a few times.
+    for (const wait of [1500, 3000, 6000]) {
+      await new Promise((r) => setTimeout(r, wait));
+      if (await shareKeys(null)) return;
+    }
   });
   // Refresh the firm's time settings once Karbon has loaded, in case an admin changed them.
   setTimeout(() => pageCall('timeSettings', { fresh: true }).catch(() => {}), 6000);

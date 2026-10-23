@@ -255,6 +255,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     discardTimer().then(sendResponse);
     return true;
   }
+  if (msg.type === 'pageKeys') {
+    learnAccount(msg.keys).then(sendResponse, () => sendResponse({ signedIn: false }));
+    return true;
+  }
   if (msg.type === 'learnAccount') {
     learnAccount().then(sendResponse, () => sendResponse({ signedIn: false }));
     return true;
@@ -401,17 +405,33 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // ---- Account keys from Karbon's bootstrap cookie (no Karbon tab needed) ----
 // Karbon sets a readable cookie, bootstrap-cookie-<env>, holding the default tenant, the user's
 // profile key (the stopwatch ID), and the regional API host. It carries no secrets.
+let cookieNote = '';
 async function readBootstrapCookie() {
-  let cookies = [];
-  try { cookies = await chrome.cookies.getAll({ url: KARBON }); } catch { return null; }
-  const c = cookies.find((x) => x.name.startsWith('bootstrap-cookie-'));
+  const tries = [{ url: KARBON }, { domain: 'karbonhq.com' }];
+  let c = null;
+  const notes = [];
+  for (const q of tries) {
+    try {
+      const list = await chrome.cookies.getAll(q);
+      c = list.find((x) => x.name.startsWith('bootstrap-cookie-'));
+      notes.push(`${q.url ? 'url' : 'domain'}: ${list.length} cookies`);
+      if (c) break;
+    } catch (e) { notes.push(`${q.url ? 'url' : 'domain'}: ${String((e && e.message) || e)}`); }
+  }
+  cookieNote = c ? '' : notes.join('; ');
   if (!c) return null;
   const o = {};
-  decodeURIComponent(c.value).split('&').forEach((pair) => {
+  let text = c.value;
+  try { text = decodeURIComponent(c.value); } catch {}
+  text.split('&').forEach((pair) => {
     const i = pair.indexOf('=');
-    if (i > 0) o[pair.slice(0, i).trim()] = decodeURIComponent(pair.slice(i + 1));
+    if (i > 0) {
+      let v = pair.slice(i + 1);
+      try { v = decodeURIComponent(v); } catch {}
+      o[pair.slice(0, i).trim()] = v;
+    }
   });
-  if (!o.tenantPermaKey || !o.userProfilePermaKey) return null;
+  if (!o.tenantPermaKey || !o.userProfilePermaKey) { cookieNote = 'cookie found without keys'; return null; }
   let base = null;
   try { base = new URL(o.dataCenterUrl || o.bootstrapEndpoint).origin; } catch {}
   return { tenant: o.tenantPermaKey, user: o.userProfilePermaKey, base };
@@ -419,11 +439,14 @@ async function readBootstrapCookie() {
 
 // Stores the keys, and checks once whether the background can reach Karbon's API without a tab.
 // The result is shown on the setup guide. firmName is for display only.
-async function learnAccount() {
-  const k = await readBootstrapCookie();
+// fromPage: keys reported by an open Karbon tab, used when the cookie can't be read here.
+async function learnAccount(fromPage = null) {
+  const k = (await readBootstrapCookie()) || (fromPage && fromPage.tenant && fromPage.user ? fromPage : null);
   if (!k) {
-    await chrome.storage.local.set({ signedIn: false });
-    return { signedIn: false };
+    // Keep keys an open Karbon tab already reported; only say "not signed in" when there are none.
+    const known = await chrome.storage.local.get(['user']);
+    await chrome.storage.local.set({ signedIn: !!known.user, cookieNote });
+    return { signedIn: !!known.user };
   }
   const prev = await chrome.storage.local.get(['user']);
   const keep = { signedIn: true, tenant: k.tenant, user: k.user };
@@ -444,7 +467,7 @@ async function learnAccount() {
       }
     } catch (e) { direct.error = String(e && e.message || e); }
   }
-  await chrome.storage.local.set({ ...keep, directApi: { ...direct, at: Date.now() } });
+  await chrome.storage.local.set({ ...keep, cookieNote, keySource: fromPage && k === fromPage ? 'tab' : 'cookie', directApi: { ...direct, at: Date.now() } });
   return { signedIn: true, direct };
 }
 

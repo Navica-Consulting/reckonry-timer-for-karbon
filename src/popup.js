@@ -405,11 +405,11 @@ $('feedback').addEventListener('click', async () => {
 async function showConnCheck() {
   const el = $('connCheck');
   if (!el) return;
-  const k = await chrome.storage.local.get(['signedIn', 'directApi', 'firmName']);
+  const k = await chrome.storage.local.get(['signedIn', 'directApi', 'firmName', 'cookieNote', 'keySource']);
   const d = k.directApi;
-  if (k.signedIn === false) el.textContent = 'Connection: not signed in to Karbon in this browser.';
+  if (k.signedIn === false) el.textContent = `Connection: not signed in to Karbon in this browser${k.cookieNote ? ` (${k.cookieNote})` : ''}.`;
   else if (!d) el.textContent = 'Connection: not checked yet.';
-  else if (d.ok) el.textContent = `Connection: works without a Karbon tab${k.firmName ? ` (${k.firmName})` : ''}.`;
+  else if (d.ok) el.textContent = `Connection: works without a Karbon tab${k.firmName ? ` (${k.firmName})` : ''}.${k.keySource === 'tab' ? ` Account read from a Karbon tab${k.cookieNote ? `; cookie: ${k.cookieNote}` : ''}.` : ''}`;
   else el.textContent = `Connection: needs a Karbon tab (status ${d.status || 'none'}${d.error ? `, ${d.error}` : ''}).`;
 }
 showConnCheck();

@@ -15,6 +15,44 @@
     if (m && m[1] !== location.origin) K.base = m[1];
   };
   try { performance.getEntriesByType('resource').forEach((e) => learnBase(e.name)); } catch {}
+
+  // Learn the tenant, user, and API host without waiting for Karbon to fetch the stopwatch.
+  // 1) Karbon's readable bootstrap cookie (default tenant only, so it must match this page's tenant).
+  // 2) Karbon's own session service, which follows the tenant in the URL.
+  const pageTenant = () => location.pathname.split('/')[1] || null;
+  function learnFromPage() {
+    try {
+      const raw = document.cookie.split(';').map((c) => c.trim()).find((c) => c.startsWith('bootstrap-cookie-'));
+      if (raw) {
+        const o = {};
+        decodeURIComponent(raw.slice(raw.indexOf('=') + 1)).split('&').forEach((pair) => {
+          const i = pair.indexOf('=');
+          if (i > 0) o[pair.slice(0, i).trim()] = decodeURIComponent(pair.slice(i + 1));
+        });
+        const t = pageTenant();
+        if (o.tenantPermaKey && o.userProfilePermaKey && (!t || t === o.tenantPermaKey)) {
+          if (!K.tenant) K.tenant = o.tenantPermaKey;
+          if (!K.user && K.tenant === o.tenantPermaKey) K.user = o.userProfilePermaKey;
+        }
+        if (!K.base && o.dataCenterUrl) K.base = new URL(o.dataCenterUrl).origin;
+      }
+    } catch {}
+    try {
+      const app = window.StagingApp;
+      const inst = app && (app.__deprecatedInstance__ || (app._applicationInstances && [...app._applicationInstances][0]));
+      const ses = inst && inst.lookup && inst.lookup('service:session');
+      if (ses && ses.isLoggedIn) {
+        const t = ses.tenantPermaKey;
+        if (t && (!K.tenant || K.tenant === t)) {
+          K.tenant = t;
+          if (!K.user) K.user = ses.userProfilePermaKey || null;
+        }
+        if (!K.base && ses.siteBaseUrl) K.base = new URL(ses.siteBaseUrl).origin;
+      }
+    } catch {}
+    return !!(K.tenant && K.user && K.base);
+  }
+  learnFromPage();
   const origFetch = window.fetch.bind(window);
 
   const post = (msg) => window.postMessage({ src: 'kt-page', ...msg }, location.origin);
@@ -103,6 +141,7 @@
     if (!K.base) {
       try { performance.getEntriesByType('resource').forEach((e) => learnBase(e.name)); } catch {}
     }
+    if (!K.base) learnFromPage();
     if (!K.base) throw new Error('Karbon is still loading. Try again in a few seconds.');
     return K.base;
   }
@@ -127,7 +166,8 @@
   }
 
   function ensureKeys() {
-    if (!K.tenant) K.tenant = location.pathname.split('/')[1] || null;
+    if (!K.user) learnFromPage();
+    if (!K.tenant) K.tenant = pageTenant();
     if (!K.user) throw new Error('Karbon is still loading. Try again in a few seconds.');
   }
   const swPath = () => `/time/api/${K.tenant}/stopwatches/${K.user}`;
@@ -368,7 +408,8 @@
     if (!K.tenant && tenant && location.pathname.split('/')[1] === tenant) K.tenant = tenant;
     if (!K.user && user && K.tenant === tenant) K.user = user;
     if (!K.base && base) K.base = base;
-    return { ready: !!(K.tenant && K.user && K.base) };
+    learnFromPage();
+    return { ready: !!(K.tenant && K.user && K.base), tenant: K.tenant, user: K.user, base: K.base };
   };
 
   const COMMANDS = {
