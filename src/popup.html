@@ -94,10 +94,12 @@
             <span class="txt">Also on contacts<span class="sub" id="contactsSub">People, organizations, and client groups</span></span>
             <input type="checkbox" class="switch" role="switch" name="autoStartContacts">
           </label>
-          <label class="opt" data-when="contactWait">
-            <span class="txt">Start contacts after</span>
-            <span class="num"><input type="number" name="contactStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a contact"> sec</span>
-          </label>
+          <div class="nest" data-when="contactWait">
+            <label class="opt">
+              <span class="txt">Start contacts after</span>
+              <span class="num"><input type="number" name="contactStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a contact"> sec</span>
+            </label>
+          </div>
         </div>
         <label class="opt radio">
           <span class="txt">Remind me to start one</span>

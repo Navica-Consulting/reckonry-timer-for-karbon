@@ -79,8 +79,7 @@ label.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--mute
 .group h3 + .opt { border-top:0; }
 .opt .txt { flex:1; min-width:0; }
 .opt .sub { display:block; color:var(--muted); font-size:12px; line-height:1.35; margin-top:1px; }
-.opt.dep { padding-left:14px; }
-.opt.off { opacity:.45; cursor:default; }
+.opt.off, .nest.off { opacity:.45; cursor:default; }
 .opt.stack { display:block; cursor:default; }
 .opt.stack select { margin-top:6px; }
 .num { display:flex; align-items:center; gap:5px; flex:none; color:var(--muted); font-size:13px; }
@@ -115,15 +114,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .banner p + p { margin-top:4px; }
 .blank-work { margin-top:2px; font-weight:600; color:var(--muted); }
 
-/* Preference groups: radio choices, and nested settings in a shaded area that brightens when its parent is on */
+/* Preference groups: radio choices, and settings that depend on the row above */
 fieldset.group { border:0; margin:10px 0 0; min-width:0; }
 fieldset.group legend { padding:0; float:left; width:100%; }
 fieldset.group legend + * { clear:both; }
 fieldset.group legend h3 { margin:10px 0 2px; }
 fieldset.group legend + .opt { border-top:0; }
 input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:var(--accent); cursor:pointer; }
-.nest { margin:0 0 8px 12px; padding:0 10px; border-left:3px solid var(--accent); border-radius:0 8px 8px 0;
-        background:var(--bg); transition:opacity .15s, border-color .15s; }
-.nest .opt:first-child { border-top:0; }
-.nest.off { opacity:.45; border-left-color:var(--line); }
+/* Radio before its label, so nested settings line up with the label text (18px radio + 10px gap). */
+.opt.radio { justify-content:flex-start; gap:10px; }
+.opt.radio input { order:-1; }
+/* Nested settings are indented to the parent's text, and their dividers start at the indent. */
+.nest { margin-left:28px; transition:opacity .15s; }
+.nest .opt { padding:7px 0; }
 .nest.off .opt { cursor:default; }
+/* A dimmed row inside a dimmed area shouldn't fade twice. */
+.off .off { opacity:1; }
