@@ -4,9 +4,9 @@ importScripts('config.js', 'notes.js');
 
 const DEFAULTS = {
   autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-  autoSwitch: false, remindNoTimer: false, nudgeSeconds: 60,
+  autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
   pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: false,
-  longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
+  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
   noteLevel: 'auto', debugLog: false,
 };
 const KARBON = KT_ORIGIN;
@@ -43,7 +43,7 @@ function badgeFor(s, cfg, waiting) {
   if (waiting && active(s)) return { text: '!', color: COLORS.long, dark: true };
   if (!active(s)) return cfg.showIdleBadge ? { text: 'off', color: COLORS.none } : { text: '' };
   if (s.state === 'Paused') return { text: 'II', color: COLORS.paused };
-  const long = cfg.longTimerHours > 0 && elapsedSeconds(s) >= cfg.longTimerHours * 3600;
+  const long = longOn(cfg) && elapsedSeconds(s) >= cfg.longTimerHours * 3600;
   return { text: elapsedText(s), color: long ? COLORS.long : COLORS.run, dark: long };
 }
 
@@ -81,8 +81,10 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
 });
 
 // ---- Long-running timer alert (once per timer) ----
+const longOn = (cfg) => !!cfg.longTimerAlert && cfg.longTimerHours > 0;
+
 async function checkLongTimer(s, cfg) {
-  if (!active(s) || s.state !== 'Started' || !(cfg.longTimerHours > 0)) return;
+  if (!active(s) || s.state !== 'Started' || !longOn(cfg)) return;
   if (elapsedSeconds(s) < cfg.longTimerHours * 3600) return;
   const id = `long:${s.work}:${s.initialStart}`;
   const { alerted } = await chrome.storage.session.get('alerted');
@@ -169,9 +171,10 @@ async function openWork({ tenant, work, linkType }) {
 // A stop or switch that can't save yet pauses the timer and asks for the missing details.
 // pendingFinish: { note, then, thenTitle, missing, reason }. "then" is the start to run once the entry is saved.
 // ui: 'window' opens a small finish window; 'popup' means the toolbar panel shows the form itself.
-async function promptFinish({ note = null, then = null, thenTitle = null, missing = ['work'], reason = 'stop', ui = 'window' }) {
+// suggest: the item you had open, offered as a one-click pick on the finish form.
+async function promptFinish({ note = null, then = null, thenTitle = null, missing = ['work'], reason = 'stop', ui = 'window', suggest = null }) {
   await toKarbon('autoPause', { note: null });
-  await chrome.storage.session.set({ pendingFinish: { note, then, thenTitle, missing, reason, at: Date.now() } });
+  await chrome.storage.session.set({ pendingFinish: { note, then, thenTitle, missing, reason, suggest, at: Date.now() } });
   await refreshBadge();
   if (ui === 'window') await openFinishWindow();
   return { ok: true };
@@ -412,7 +415,12 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   } else if (old.autoStart !== undefined) {
     carry.autoStartWork = !!old.autoStart;
   }
+  // 0.7.1: the long-timer alert became a switch. An old "0 hours" meant off.
+  const lt = await chrome.storage.sync.get(['longTimerAlert', 'longTimerHours']);
+  if (lt.longTimerAlert === undefined && lt.longTimerHours === 0) Object.assign(carry, { longTimerAlert: false, longTimerHours: 3 });
   if (Object.keys(carry).length) await chrome.storage.sync.set(carry);
+  // 0.7.1: the default work item was removed.
+  await chrome.storage.local.remove('defaultWork');
   await chrome.storage.sync.remove(['autoStart', 'noTimerAction', 'dwellSeconds', 'toastSeconds'].filter((k) => old[k] !== undefined));
   if (reason === 'install') chrome.tabs.create({ url: 'welcome.html' });
   boot();
@@ -421,5 +429,5 @@ chrome.runtime.onStartup.addListener(boot);
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'sync') return;
   if (changes.idleMinutes) applyIdleInterval();
-  if (changes.showIdleBadge || changes.badgeWhere || changes.longTimerHours) refreshBadge();
+  if (changes.showIdleBadge || changes.badgeWhere || changes.longTimerHours || changes.longTimerAlert) refreshBadge();
 });

@@ -3,7 +3,7 @@
 (() => {
   const DEFAULTS = {
     autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-    autoSwitch: false, remindNoTimer: false, nudgeSeconds: 60,
+    autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
     noteLevel: 'auto', debugLog: false,
   };
   const pending = new Map();
@@ -96,9 +96,6 @@
     removeToast();
     if (!item) return;
     chrome.storage.sync.get(DEFAULTS).then((s) => {
-      const isWork = item.linkType === 'WorkItem';
-      const wanted = isWork ? (s.autoStartWork || s.autoSwitch || s.remindNoTimer) : s.autoStartContacts;
-      if (!wanted) return log(`${KIND[item.linkType]} opened; automation is off for it`);
       timers.push(setTimeout(() => onOpen(item, s), SETTLE_MS));
     });
   }, 500);
@@ -121,13 +118,16 @@
     const running = state.state !== 'Stopped';
     log(`timer ${state.state}, same item: ${state.work === key}`);
     if (state.work === key) return;
+    // A running timer with no work item: always ask, whatever the settings, and keep asking until answered.
+    if (running && !state.work) return showFinishPrompt(item, s);
 
+    // Contact auto-start sits under work-item auto-start, so it only applies while that is on.
+    const wanted = isWork ? (s.autoStartWork || s.autoSwitch || s.remindNoTimer) : s.autoStartWork && s.autoStartContacts;
+    if (!wanted) return log(`${KIND[item.linkType]} opened; automation is off for it`);
     const seconds = isWork ? s.workStartSeconds : s.contactStartSeconds;
-    const canStart = isWork ? s.autoStartWork : s.autoStartContacts;
+    const canStart = isWork ? s.autoStartWork : s.autoStartWork && s.autoStartContacts;
     // Contacts only take over a running timer when contact auto-start is on.
-    // A running timer with no work item can't be saved on its own, so ask before switching.
-    if (running && !state.work && s.autoSwitch && (isWork || canStart)) return offerFinish(item, s);
-    if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, seconds);
+    if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, s.switchSeconds);
     if (!running && canStart) return autoAct(item, s, false, seconds);
     if (!running && isWork && s.remindNoTimer && !dismissed.has(key)) {
       timers.push(setTimeout(() => nudge(item, s), Math.max(0, s.nudgeSeconds * 1000 - SETTLE_MS)));
@@ -142,26 +142,75 @@
   // Karbon's tab title starts with the item's name.
   const pageTitle = () => (document.title || '').split(' | ')[0].replace(/ - [^-]+$/, '').trim() || null;
 
-  // The running timer needs details (usually a work item) before it can be saved. The background
-  // pauses it and opens the finish window; the switch to this item runs once the entry is saved.
-  async function askToFinish(item, s, startArgsForItem) {
-    await chrome.runtime.sendMessage({
-      type: 'promptFinish', ui: 'window', reason: 'switch',
-      note: KTNotes.note('switchedAway', s.noteLevel),
-      then: startArgsForItem, thenTitle: pageTitle(),
-    });
+  // ---- Persistent finish prompt ----
+  // Shown when you open a work item or contact while a timer with no work item is running.
+  // It has no countdown and stays through page changes until you answer it; opening another item
+  // just updates it. Finishing pauses the timer and opens the finish window, with the item you
+  // opened offered as a one-click pick. With auto-switch on, the timer then moves to that item.
+  let promptHost = null;
+  let promptItem = null;
+
+  function removePrompt() {
+    if (promptHost) promptHost.remove();
+    promptHost = null;
+    promptItem = null;
   }
 
-  async function offerFinish(item, s) {
-    const kind = KIND[item.linkType];
-    const go = await showToast({
-      text: 'Your running timer has no work item yet. Finish it to switch the timer here.',
-      seconds: 20, mode: 'confirm', confirmLabel: 'Finish and switch',
-    });
-    if (!go || !here(item.key)) return log('finish offer dismissed');
-    await askToFinish(item, s, await startArgs(item, { note: KTNotes.note('switchedIn', s.noteLevel) }));
-    log(`finish prompt opened for a switch to this ${kind}`);
+  function showFinishPrompt(item, s) {
+    const title = pageTitle() || `this ${KIND[item.linkType]}`;
+    promptItem = { ...item, title };
+    if (!promptHost) {
+      promptHost = document.createElement('div');
+      const root = promptHost.attachShadow({ mode: 'closed' });
+      root.innerHTML = `
+        <style>
+          .p{position:fixed;right:20px;bottom:20px;z-index:2147483647;background:#1f2933;color:#fff;width:340px;
+             font:14px/1.45 system-ui,sans-serif;padding:14px 16px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.3);
+             border-left:5px solid #f2c94c}
+          h2{font-size:15px;margin:0 0 4px}
+          p{margin:0 0 10px}
+          .row{display:flex;gap:8px;flex-wrap:wrap}
+          button{font:inherit;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+          .go{background:#7cb0ff;color:#0b1c33;font-weight:600}
+          .no{background:#fff;color:#1f2933}
+          button:focus-visible{outline:3px solid #7cc4fa;outline-offset:2px}
+        </style>
+        <div class="p" role="alertdialog" aria-labelledby="h" aria-describedby="d">
+          <h2 id="h">Your timer has no work item</h2>
+          <p id="d"></p>
+          <div class="row"><button type="button" class="go"></button><button type="button" class="no">Keep it running</button></div>
+        </div>`;
+      promptHost._root = root;
+      root.querySelector('.no').addEventListener('click', () => { log('finish prompt: keep running'); removePrompt(); });
+      root.querySelector('.go').addEventListener('click', async () => {
+        const it = promptItem;
+        const cfg = await chrome.storage.sync.get(DEFAULTS);
+        removePrompt();
+        const state = await readState();
+        if (!state || state.state === 'Stopped' || state.work) return; // already finished elsewhere
+        const then = cfg.autoSwitch ? await startArgs(it, { note: KTNotes.note('switchedIn', cfg.noteLevel) }) : null;
+        await chrome.runtime.sendMessage({
+          type: 'promptFinish', ui: 'window', reason: then ? 'switch' : 'stop',
+          note: KTNotes.note(then ? 'switchedAway' : 'manualStop', cfg.noteLevel),
+          then, thenTitle: then ? it.title : null,
+          suggest: { key: it.key, linkType: it.linkType, title: it.title },
+        });
+      });
+      document.documentElement.appendChild(promptHost);
+    }
+    const root = promptHost._root;
+    root.getElementById('d').textContent = s.autoSwitch
+      ? `You opened ${title}. Choose where the time so far belongs, then the timer moves here.`
+      : `You opened ${title}. Choose where the time so far belongs and save it.`;
+    root.querySelector('.go').textContent = s.autoSwitch ? 'Finish and switch here' : 'Finish timer';
   }
+
+  // Clear the prompt if the timer gets a work item or stops elsewhere.
+  setInterval(async () => {
+    if (!promptHost) return;
+    const st = await readState();
+    if (st && (st.state === 'Stopped' || st.work)) removePrompt();
+  }, 5000);
 
   async function autoAct(item, s, switching, seconds) {
     const kind = KIND[item.linkType];

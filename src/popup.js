@@ -1,8 +1,8 @@
 const DEFAULTS = {
   autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-  autoSwitch: false, remindNoTimer: false, nudgeSeconds: 60,
+  autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
   pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: false,
-  longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
+  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
   noteLevel: 'auto', debugLog: false,
 };
 const KARBON = KT_ORIGIN;
@@ -11,12 +11,10 @@ const FEEDBACK_EMAIL = 'max@navicaconsulting.com';
 const ICON = {
   pause: 'M9 6v12M15 6v12',
   play: 'M8 5.5v13l10-6.5z',
-  star: 'M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.2L12 16.4l-4.6 2.4.9-5.2-3.8-3.6 5.2-.8z',
 };
 
 let current = null;      // timer state
 let here = null;         // the active tab, when it is a Karbon work item: { key, title }
-let defaultWork = null;  // { key, linkType, title, subtitle }
 let timeCfg = null;      // the firm's time settings: { workOnly, notesRequired }
 let tick = null;
 let chosen = null;       // the work item or contact picked in the Work field
@@ -50,24 +48,15 @@ function sayError(r) {
   say((r && r.error) || 'Something went wrong.');
 }
 
-function iconButton(label, path, onclick) {
-  const b = el('button', { type: 'button', class: 'icon small', 'aria-label': label, title: label, onclick });
-  b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
-  return b;
-}
-
 const workOnly = () => !!(timeCfg && timeCfg.workOnly);
 
-function itemRow(item, { lead, onStart, allowDefault = true }) {
+function itemRow(item, { lead, onStart }) {
   const label = el('button', { type: 'button', class: 'item', onclick: () => onStart(item) },
     el('span', { class: 't' }, lead ? el('span', { class: 'lead' }, `${lead} `) : null, item.title || 'Untitled',
       TAGS[item.linkType] ? el('span', { class: 'tag' }, TAGS[item.linkType]) : null),
     item.subtitle ? el('span', { class: 's' }, item.subtitle) : null);
   label.setAttribute('aria-label', `${lead ? `${lead} ` : 'Choose '}${item.title || 'item'}${item.subtitle ? `, ${item.subtitle}` : ''}`);
-  const star = allowDefault && (!defaultWork || defaultWork.key !== item.key) && !(workOnly() && item.linkType !== 'WorkItem')
-    ? iconButton(`Make ${item.title || 'this'} my default work item`, ICON.star, () => setDefault(item))
-    : null;
-  return el('li', {}, label, star);
+  return el('li', {}, label);
 }
 
 // ---- Rendering the current timer ----
@@ -115,16 +104,13 @@ function render(s) {
   renderQuick();
 }
 
-// "This work item" and your default, as one-click starts.
+// "This work item" as a one-click pick.
 function renderQuick() {
   const list = $('quickList');
   list.replaceChildren();
   const running = isActive(current) ? current.work : null;
   if (here && here.key !== running) {
     list.append(itemRow({ key: here.key, linkType: 'WorkItem', title: here.title }, { lead: 'This work item:', onStart: choose }));
-  }
-  if (defaultWork && defaultWork.key !== running && (!here || here.key !== defaultWork.key)) {
-    list.append(itemRow(defaultWork, { lead: 'Default:', onStart: choose, allowDefault: false }));
   }
 }
 
@@ -259,28 +245,6 @@ async function loadLookups() {
   paint(lk);
 }
 
-// ---- Default work item ----
-async function setDefault(item) {
-  defaultWork = { key: item.key, linkType: item.linkType || 'WorkItem', title: item.title, subtitle: item.subtitle || '' };
-  await chrome.storage.local.set({ defaultWork });
-  say(`${item.title || 'Item'} is now your default.`);
-  renderQuick();
-  renderDefaultInfo();
-}
-
-function renderDefaultInfo() {
-  const p = $('defaultInfo');
-  p.replaceChildren();
-  if (!defaultWork) {
-    p.append('None set. Use the star next to any item to make it your default for quick starts.');
-    return;
-  }
-  p.append(`${defaultWork.title || 'Untitled'}. `, el('button', {
-    type: 'button', class: 'linklike',
-    onclick: async () => { defaultWork = null; await chrome.storage.local.remove('defaultWork'); renderQuick(); renderDefaultInfo(); },
-  }, 'Clear default'));
-}
-
 // ---- Search and recents ----
 let searchSeq = 0;
 function showResults(head, items) {
@@ -324,10 +288,14 @@ $('q').addEventListener('input', () => {
 });
 
 // ---- Preferences ----
+// The "no timer running" choice is one radio group stored as two switches: autoStartWork and remindNoTimer.
+const startMode = (s) => (s.autoStartWork ? 'auto' : s.remindNoTimer ? 'nudge' : 'none');
+
 (async () => {
   const s = await chrome.storage.sync.get(DEFAULTS);
   const form = $('prefs');
   for (const f of form.elements) {
+    if (f.name === 'startMode') { f.checked = f.value === startMode(s); continue; }
     if (!(f.name in s)) continue;
     if (f.type === 'checkbox') f.checked = !!s[f.name];
     else f.value = s[f.name];
@@ -335,10 +303,14 @@ $('q').addEventListener('input', () => {
   form.addEventListener('change', (e) => {
     const f = e.target;
     let v;
-    if (f.type === 'checkbox') v = f.checked;
-    else if (f.type === 'number') v = Math.max(Number(f.min) || 0, Number.isFinite(Number(f.value)) && f.value !== '' ? Number(f.value) : DEFAULTS[f.name]);
-    else v = f.value;
-    chrome.storage.sync.set({ [f.name]: v });
+    if (f.name === 'startMode') {
+      chrome.storage.sync.set({ autoStartWork: f.value === 'auto', remindNoTimer: f.value === 'nudge' });
+    } else {
+      if (f.type === 'checkbox') v = f.checked;
+      else if (f.type === 'number') v = Math.max(Number(f.min) || 0, Number.isFinite(Number(f.value)) && f.value !== '' ? Number(f.value) : DEFAULTS[f.name]);
+      else v = f.value;
+      chrome.storage.sync.set({ [f.name]: v });
+    }
     say('Preference saved.');
     updateDeps();
   });
@@ -348,20 +320,30 @@ $('q').addEventListener('input', () => {
 // Dim and disable settings that only matter when another one is on.
 function updateDeps() {
   const f = $('prefs').elements;
+  const mode = (f.startMode.value || 'none');
   const on = {
-    workWait: f.autoStartWork.checked || f.autoSwitch.checked,
+    modeAuto: mode === 'auto',
+    modeNudge: mode === 'nudge',
     contacts: !workOnly(),
     contactWait: !workOnly() && f.autoStartContacts.checked,
-    remind: !f.autoStartWork.checked,
-    nudge: !f.autoStartWork.checked && f.remindNoTimer.checked,
+    autoSwitch: f.autoSwitch.checked,
     idlePause: f.idlePause.checked,
     anyPause: f.pauseOnLock.checked || f.idlePause.checked,
+    longTimer: f.longTimerAlert.checked,
     badge: f.badgeWhere.value !== 'never',
   };
+  // A nested row is live only when its own condition and every enclosing area's condition are on.
   for (const row of document.querySelectorAll('#prefs [data-when]')) {
-    const live = !!on[row.dataset.when];
+    let live = true;
+    for (let n = row; n && n.id !== 'prefs'; n = n.parentElement) {
+      if (n.dataset && n.dataset.when && !on[n.dataset.when]) live = false;
+    }
     row.classList.toggle('off', !live);
-    for (const input of row.querySelectorAll('input, select')) input.disabled = !live;
+    for (const input of row.querySelectorAll('input, select')) {
+      // Leave inputs to their own row when that row has a condition of its own.
+      const owner = input.closest('[data-when]');
+      if (owner === row) input.disabled = !live;
+    }
   }
 }
 
@@ -387,7 +369,9 @@ $('feedback').addEventListener('click', async () => {
     'What happened, or what would you like to see?', '', '', '',
     '---',
     `Version: ${v}`, `Chrome: ${chromeVer}`,
-    `Auto-start: work ${s.autoStartWork ? `${s.workStartSeconds}s` : 'off'}, contacts ${s.autoStartContacts ? `${s.contactStartSeconds}s` : 'off'}`, `Badge: ${s.badgeWhere}`, `Notes level: ${s.noteLevel}`,
+    `No timer: ${startMode(s)}${s.autoStartWork ? ` (work ${s.workStartSeconds}s, contacts ${s.autoStartContacts ? `${s.contactStartSeconds}s` : 'off'})` : ''}`,
+    `Auto-switch: ${s.autoSwitch ? `${s.switchSeconds}s` : 'off'}`, `Long-timer alert: ${s.longTimerAlert ? `${s.longTimerHours}h` : 'off'}`,
+    `Badge: ${s.badgeWhere}`, `Notes level: ${s.noteLevel}`,
     `Settings on: ${on}`, `Work items only: ${workOnly() ? 'yes' : 'no'}`,
   ].join('\n');
   const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(`Reckonry Timer for Karbon feedback (v${v})`)}&body=${encodeURIComponent(body)}`;
@@ -405,14 +389,12 @@ $('feedback').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const m = tab && tab.url && tab.url.match(new RegExp(`^${KARBON.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}[^/]+/work/([A-Za-z0-9]+)`));
   if (m) here = { key: m[1], title: (tab.title || '').split(' | ')[0].replace(/ - [^-]+$/, '').trim() || 'This work item' };
-  ({ defaultWork = null, timeCfg = null } = await chrome.storage.local.get(['defaultWork', 'timeCfg']));
+  ({ timeCfg = null } = await chrome.storage.local.get('timeCfg'));
   if (workOnly()) {
     $('q').placeholder = 'Search work items';
-    if (defaultWork && defaultWork.linkType !== 'WorkItem') defaultWork = null; // a contact default can't be used here
   }
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only';
   updateDeps();
-  renderDefaultInfo();
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
   loadRecents(false);

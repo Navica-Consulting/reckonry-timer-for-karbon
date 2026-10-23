@@ -244,6 +244,13 @@ function explain() {
 
   await loadLookups();
   if (!state.work) {
+    // The item you had open in Karbon, as a one-click pick above the recents.
+    if (pending && pending.suggest && pending.suggest.key) {
+      const sg = pending.suggest;
+      const li = itemRow({ key: sg.key, linkType: sg.linkType, title: sg.title });
+      li.querySelector('.item').prepend(el('span', { class: 'lead' }, 'The item you opened: '));
+      $('suggest').replaceChildren(li);
+    }
     loadRecents();
     $('q').focus();
   } else {

@@ -114,3 +114,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .banner p { margin:0; }
 .banner p + p { margin-top:4px; }
 .blank-work { margin-top:2px; font-weight:600; color:var(--muted); }
+
+/* Preference groups: radio choices, and nested settings in a shaded area that brightens when its parent is on */
+fieldset.group { border:0; margin:10px 0 0; min-width:0; }
+fieldset.group legend { padding:0; float:left; width:100%; }
+fieldset.group legend + * { clear:both; }
+fieldset.group legend h3 { margin:10px 0 2px; }
+fieldset.group legend + .opt { border-top:0; }
+input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:var(--accent); cursor:pointer; }
+.nest { margin:0 0 8px 12px; padding:0 10px; border-left:3px solid var(--accent); border-radius:0 8px 8px 0;
+        background:var(--bg); transition:opacity .15s, border-color .15s; }
+.nest .opt:first-child { border-top:0; }
+.nest.off { opacity:.45; border-left-color:var(--line); }
+.nest.off .opt { cursor:default; }
