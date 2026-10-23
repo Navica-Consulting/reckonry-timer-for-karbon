@@ -1,0 +1,43 @@
+<!-- Source of truth for the hosted policy. Edit here, then copy to:
+     https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home
+     See docs/PRIVACY.md for when and how to update it. -->
+
+# Privacy Policy for Reckonry Timer for Karbon
+
+Effective date: October 23, 2026
+
+Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This policy explains what the extension handles and what it does not.
+
+## What the extension handles
+
+To start, pause, and switch your Karbon timer, the extension reads and stores a small amount of information in your browser:
+
+- Your Karbon user and firm identifiers, learned from the Karbon web app.
+- The work item or contact you have open in Karbon, including its address, title, and client name.
+- Your current timer state, default role, task type, and recent work items.
+- Your extension settings.
+- Whether your computer is idle, locked, or was asleep, so the timer can pause.
+
+The extension also observes the Karbon web app's own requests to learn your timer state, and it adds short notes to your time entries when it pauses or resumes a timer.
+
+## Where your information goes
+
+Everything above is stored only in your browser, using Chrome's extension storage. Timer actions and notes are sent only to Karbon, using your existing Karbon sign-in, so Karbon can record your time.
+
+The extension does not send your information to Navica LLC or to anyone else. It has no analytics, tracking, or advertising, and it does not sell or share your data.
+
+## Feedback
+
+If you choose to send feedback, the extension opens an email in your own email app. The email includes only the extension version and which settings are turned on. You can review or edit it before you send it.
+
+## Removing your data
+
+Uninstalling the extension deletes everything it stored in your browser. Time entries and notes saved in Karbon stay in Karbon.
+
+## Changes
+
+If this policy changes, the updated version will be posted at this address with a new effective date.
+
+## Contact
+
+Questions: reckonry_timer_for_karbon_support@navicaconsulting.com

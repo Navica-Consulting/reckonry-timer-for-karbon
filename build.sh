@@ -5,13 +5,14 @@
 #   unpacked/stage        webapp-stage.karbonhq.com (Load unpacked; never publish)
 #
 # Each run overwrites both unpacked folders in place, so Chrome only needs Reload.
-# It also writes versioned zips beside them:
-#   reckonry-timer-for-karbon-<ver>.zip        store upload
-#   reckonry-timer-for-karbon-<ver>-stage.zip  stage build
-#   reckonry-timer-source-<ver>.zip            src/ and build.sh
+# It also writes versioned zips to dist/ (not tracked in git; tag the commit instead):
+#   dist/reckonry-timer-for-karbon-<ver>.zip        store upload
+#   dist/reckonry-timer-for-karbon-<ver>-stage.zip  stage build
+#   dist/reckonry-timer-source-<ver>.zip            src/ and build.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 VER=$(python3 -c "import json;print(json.load(open('src/manifest.json'))['version'])")
+mkdir -p dist
 
 build() { # target origin nameSuffix
   local target=$1 origin=$2 suffix=$3 out=unpacked/$1
@@ -32,7 +33,7 @@ if suffix:
     m['action']['default_title'] = 'Reckonry Timer for Karbon (stage)'
 json.dump(m, open(path, 'w'), indent=2)
 PY
-  local zip=reckonry-timer-for-karbon-$VER${suffix}.zip
+  local zip=dist/reckonry-timer-for-karbon-$VER${suffix}.zip
   [ -f "$zip" ] && : > "$zip"
   python3 - "$out" "$zip" <<'PY'
 import os, sys, zipfile
@@ -51,7 +52,7 @@ PY
 build production https://app2.karbonhq.com/ ""
 build stage https://webapp-stage.karbonhq.com/ "-stage"
 
-python3 - "reckonry-timer-source-$VER.zip" <<'PY'
+python3 - "dist/reckonry-timer-source-$VER.zip" <<'PY'
 import os, sys, zipfile
 with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_DEFLATED) as z:
     z.write('build.sh')
@@ -60,4 +61,4 @@ with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_DEFLATED) as z:
         for f in files:
             if not f.startswith('.'): z.write(os.path.join(root, f))
 PY
-echo "Built reckonry-timer-source-$VER.zip"
+echo "Built dist/reckonry-timer-source-$VER.zip"

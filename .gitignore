@@ -1,0 +1,17 @@
+# Build output: regenerate with ./build.sh
+/dist/
+/unpacked/production/
+/unpacked/stage/
+*.zip
+*.crx
+*.pem
+
+# Chrome Web Store API credentials (never commit)
+.env
+.env.*
+*service-account*.json
+
+# OS and editor
+.DS_Store
+.vscode/
+.idea/
