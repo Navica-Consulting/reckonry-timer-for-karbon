@@ -14,4 +14,5 @@ A Chrome extension that extends the Karbon timer: start and stop, auto-switch to
 ## Key files
 - `handoff.md`: current status, next step, decisions, and session log.
 - `../artifacts/capture-summary.md`: Karbon endpoints, payloads, and the bootstrap cookie.
+- `../artifacts/settings-walkthrough-review.md`: recommendations for a "Your settings, explained" section in the setup guide (not built yet).
 - `../src/` and `../build.sh`: extension source and build script.

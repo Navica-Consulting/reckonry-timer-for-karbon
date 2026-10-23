@@ -1,0 +1,58 @@
+# Handoff: Settings walkthrough for the welcome guide
+
+Date: 2026-10-23
+Version reviewed: 0.7.2 (`src/`)
+Status: Findings and recommendations only. No code has been changed.
+
+## Question
+
+Should the get started guide (`welcome.html`) also walk users through the Preferences settings, with tips on what each one does?
+
+## Answer
+
+Yes, but as a reference section lower on the page, not as part of the setup steps.
+
+## Findings
+
+1. **The welcome page is also the reference page.** The "Setup guide" link in the Preferences footer (`popup.js`, line 360) reopens `welcome.html`. Users will come back to it, not just see it on first run.
+2. **The Preferences panel is large.** `popup.html` has 16 controls across six groups: When I open a work item, Auto-switch, Away from the computer, Alerts and badge, Time entries, and Troubleshooting. The sub-labels say *what* a setting does but not *when to change it*.
+3. **The guide already overlaps itself.** Step 3 ("Choose your preferences") and the "What it does" section both describe auto-start and auto-switch. Adding settings detail to either would create a third description.
+4. **Defaults are defined twice.** `DEFAULTS` is duplicated in `background.js` (line 5) and `popup.js` (line 1). Hard-coding defaults into the guide would make three copies that can drift.
+5. **`welcome.js` already reads storage.** It polls every 2 seconds for the setup checklist, so it can show live setting values with little extra work.
+
+## Settings that most need a tip
+
+These have effects users are unlikely to predict from the label alone.
+
+- **Notes on time entries** (default: Automatic actions only). Notes go into entry descriptions, which can appear on timesheets and invoices. This is the setting a firm admin most needs to understand.
+- **Auto-switch** (default: Off, 2 sec). Saves the current entry before moving the timer. A timer with no work item never switches on its own.
+- **Also on contacts** (default: Off, 8 sec). The longer delay than work items (2 sec) is deliberate, so quickly looking someone up does not start a timer. Users should know it is intentional.
+- **Show the timer badge** (default: Away from Karbon). Users may wonder why the badge disappears while they are in Karbon.
+- **Resume when I come back** (default: Off). Tip should explain the tradeoff: convenience versus logging time you did not intend to.
+- **Pause when I'm idle** (default: Off, 10 min). Worth explaining how it differs from Pause when my screen locks (default: On).
+- **Split timers at midnight** (default: On). Explain that a timer with no work item is paused instead of split, and a notification asks the user to finish it.
+
+## Recommendations
+
+1. **Keep the three setup steps as they are.** Step 3 is already marked optional; expanding it would turn a quick checklist into a long form.
+2. **Replace "What it does" with "Your settings, explained."** Mirror the popup's group order and names so users can match the two. For each setting, give the default, one line on what it does, and one line on when to change it.
+3. **Make it screen-reader friendly.** Use an `h3` per group and a `<dl>` for the settings (term = setting name, definition = what it does and when to change it). Consider a collapsible `<details>` per group to keep the page short.
+4. **Show current values.** Have `welcome.js` display each user's current value next to the default, for example "Default: Off. Yours: On." This turns the page into a lightweight settings audit.
+5. **Consolidate `DEFAULTS` first.** Move it into a new shared file, `defaults.js`, and load it everywhere: `importScripts('config.js', 'defaults.js', 'notes.js')` in `background.js`, plus a `<script src="defaults.js">` in `popup.html` and `welcome.html`. Then remove the copies in `background.js` and `popup.js`, and have `welcome.js` fill in the default values from the shared object. Do not put `DEFAULTS` in `config.js`: `build.sh` (line 21) overwrites that file for each build target, so anything else in it would be lost.
+6. **Trim Step 3's body text** once the reference section exists, so it points to the section instead of repeating it.
+
+## Suggested next steps
+
+1. Create `src/defaults.js` with the shared `DEFAULTS`, load it in the service worker, popup, and welcome page, and confirm `build.sh` copies it into both the production and stage builds.
+2. Draft the "Your settings, explained" copy (one tip per setting, using the list above as a starting point).
+3. Build the section markup in `welcome.html` and the current-value display in `welcome.js`.
+4. Test with VoiceOver: navigate by headings, then through the definition lists.
+5. Bump the version and rebuild with `build.sh`.
+
+## Files referenced
+
+- `src/welcome.html`, `src/welcome.js`: the guide and its live checklist
+- `src/popup.html`, `src/popup.js`: the Preferences panel and the "Setup guide" link
+- `src/background.js`: `DEFAULTS` and the behavior behind each setting
+- `src/config.js`: per-target config (`KT_ORIGIN` only); generated by `build.sh`, so keep it to build-target values
+- `build.sh`: writes each target's `config.js` (line 21)
