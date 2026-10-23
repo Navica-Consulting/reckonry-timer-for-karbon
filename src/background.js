@@ -255,6 +255,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     discardTimer().then(sendResponse);
     return true;
   }
+  if (msg.type === 'learnAccount') {
+    learnAccount().then(sendResponse, () => sendResponse({ signedIn: false }));
+    return true;
+  }
   if (msg.type === 'hasKarbonTab') {
     karbonTab().then((t) => sendResponse(!!t));
     return true;
@@ -394,6 +398,60 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   else if (alarm.name === 'dayStart') onDayStart();
 });
 
+// ---- Account keys from Karbon's bootstrap cookie (no Karbon tab needed) ----
+// Karbon sets a readable cookie, bootstrap-cookie-<env>, holding the default tenant, the user's
+// profile key (the stopwatch ID), and the regional API host. It carries no secrets.
+async function readBootstrapCookie() {
+  let cookies = [];
+  try { cookies = await chrome.cookies.getAll({ url: KARBON }); } catch { return null; }
+  const c = cookies.find((x) => x.name.startsWith('bootstrap-cookie-'));
+  if (!c) return null;
+  const o = {};
+  decodeURIComponent(c.value).split('&').forEach((pair) => {
+    const i = pair.indexOf('=');
+    if (i > 0) o[pair.slice(0, i).trim()] = decodeURIComponent(pair.slice(i + 1));
+  });
+  if (!o.tenantPermaKey || !o.userProfilePermaKey) return null;
+  let base = null;
+  try { base = new URL(o.dataCenterUrl || o.bootstrapEndpoint).origin; } catch {}
+  return { tenant: o.tenantPermaKey, user: o.userProfilePermaKey, base };
+}
+
+// Stores the keys, and checks once whether the background can reach Karbon's API without a tab.
+// The result is shown on the setup guide. firmName is for display only.
+async function learnAccount() {
+  const k = await readBootstrapCookie();
+  if (!k) {
+    await chrome.storage.local.set({ signedIn: false });
+    return { signedIn: false };
+  }
+  const prev = await chrome.storage.local.get(['user']);
+  const keep = { signedIn: true, tenant: k.tenant, user: k.user };
+  if (k.base) keep.base = k.base;
+  // Someone else signed in on this browser: last-used role and task type belonged to the old user.
+  if (prev.user && prev.user !== k.user) await chrome.storage.local.remove(['roleKey', 'taskTypeKey', 'lookups']);
+  await chrome.storage.local.set(keep);
+  let direct = { ok: false, status: 0 };
+  if (k.base) {
+    try {
+      const r = await fetch(`${k.base}/api/${k.tenant}/userEnvironmentSettings/${k.user}`, { credentials: 'include' });
+      direct.status = r.status;
+      if (r.ok) {
+        const j = await r.json().catch(() => null);
+        const env = j && j.userEnvironmentSettings;
+        direct.ok = !!(env && env.userProfilePermaKey === k.user);
+        if (env && env.tenantName) keep.firmName = env.tenantName;
+      }
+    } catch (e) { direct.error = String(e && e.message || e); }
+  }
+  await chrome.storage.local.set({ ...keep, directApi: { ...direct, at: Date.now() } });
+  return { signedIn: true, direct };
+}
+
+chrome.cookies.onChanged.addListener(({ cookie }) => {
+  if (cookie && cookie.name.startsWith('bootstrap-cookie-') && KARBON.includes(cookie.domain.replace(/^\./, ''))) learnAccount().catch(() => {});
+});
+
 // ---- Startup, install, and settings changes ----
 async function boot() {
   chrome.alarms.create('heartbeat', { periodInMinutes: HEARTBEAT_MIN });
@@ -401,6 +459,7 @@ async function boot() {
   if (!existing) scheduleDayEnd();
   applyIdleInterval();
   refreshBadge();
+  learnAccount().catch(() => {});
 }
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {

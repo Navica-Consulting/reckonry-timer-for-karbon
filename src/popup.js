@@ -400,3 +400,16 @@ $('feedback').addEventListener('click', async () => {
   loadRecents(false);
   loadLookups();
 })();
+
+// ---- Troubleshooting: can the background reach Karbon without a tab? ----
+async function showConnCheck() {
+  const el = $('connCheck');
+  if (!el) return;
+  const k = await chrome.storage.local.get(['signedIn', 'directApi', 'firmName']);
+  const d = k.directApi;
+  if (k.signedIn === false) el.textContent = 'Connection: not signed in to Karbon in this browser.';
+  else if (!d) el.textContent = 'Connection: not checked yet.';
+  else if (d.ok) el.textContent = `Connection: works without a Karbon tab${k.firmName ? ` (${k.firmName})` : ''}.`;
+  else el.textContent = `Connection: needs a Karbon tab (status ${d.status || 'none'}${d.error ? `, ${d.error}` : ''}).`;
+}
+showConnCheck();

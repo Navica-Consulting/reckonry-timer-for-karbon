@@ -42,7 +42,7 @@
   <p class="lede">A stopwatch for your Karbon timer that follows you around the browser. Start, pause, and switch timers from any site, and let the extension handle the forgettable parts.</p>
 
   <section aria-labelledby="setup">
-    <h2 id="setup">Set up in four steps</h2>
+    <h2 id="setup">Set up in three steps</h2>
     <ol class="steps">
       <li id="s-pin">
         <span class="mark" aria-hidden="true">1</span>
@@ -55,22 +55,14 @@
       <li id="s-karbon">
         <span class="mark" aria-hidden="true">2</span>
         <div>
-          <div class="step-title">Open Karbon and sign in</div>
-          <div class="step-body">The extension works through your own Karbon session. It learns your workspace the first time Karbon loads.</div>
+          <div class="step-title">Connect to Karbon</div>
+          <div class="step-body">The extension uses the Karbon sign-in already in this browser. If you're signed in, this step finishes on its own.</div>
           <div class="status" aria-live="polite"></div>
-          <button class="primary" id="openKarbon" type="button">Open Karbon</button>
-        </div>
-      </li>
-      <li id="s-defaults">
-        <span class="mark" aria-hidden="true">3</span>
-        <div>
-          <div class="step-title">Start your first timer</div>
-          <div class="step-body">Click the stopwatch and press play. A work item is optional: start right away, and when you stop or switch, the extension asks for the work item, role, and task type Karbon needs to save the time. Your role and task type picks become the defaults for next time.</div>
-          <div class="status" aria-live="polite"></div>
+          <button class="primary" id="openKarbon" type="button" hidden>Sign in to Karbon</button>
         </div>
       </li>
       <li id="s-prefs">
-        <span class="mark" aria-hidden="true">4</span>
+        <span class="mark" aria-hidden="true">3</span>
         <div>
           <div class="step-title">Choose your preferences</div>
           <div class="step-body">Click the stopwatch, then open Preferences. When you open a work item with no timer running, choose to auto-start a timer (the default, with a 2-second countdown you can cancel), get a reminder, or do nothing. Auto-switch, which moves a running timer to the item you open, is off until you turn it on.</div>
