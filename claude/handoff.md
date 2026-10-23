@@ -20,7 +20,7 @@ Reload `unpacked/production` in Chrome. Open Preferences, then Troubleshooting, 
 - Required "None" values: the finish form treats a role or task type named "None" as empty when the firm requires one. Not tested on a firm with `isActorRequired` or `isTaskTypeRequired` on (waiting on: a firm with those settings).
 - Adding a work item to a running blank timer, before stopping, would need the stopwatch `update` call with a new entity. Not captured, so not built (waiting on: Max, if wanted).
 - Privacy policy: the hosted policy (effective 2026-10-23) predates the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, and Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md`; the policy source is `docs/privacy-policy.md` (waiting on: Max).
-- Store publishing automation: Chrome Web Store API v2 with a service account, run from CI on a version tag. The first upload must be manual (waiting on: Max, to create the item and the service account).
+- Store publishing automation: built. Pushing a `v<version>` tag runs `.github/workflows/release.yml`, which builds and creates a GitHub release, and publishes through Chrome Web Store API v2 once the repository variables are set. It signs in with Workload Identity Federation, so there is no key. Setup is in `docs/RELEASING.md`; the first store upload must be manual (waiting on: Max, to create the store item, the Cloud setup, and the variables).
 - Notes visibility: confirm whether time entry notes can reach invoices or client-facing reports, since auto-pause notes will be appended there (waiting on: nothing).
 - Contractor terms: confirm a public extension that drives Karbon's UI does not conflict with the Karbon contractor agreement; collecting user emails and promoting Navica add to this question (waiting on: nothing).
 - Trademark and listing name: check against the Karbon brand guide, which Max has (waiting on: nothing).
@@ -40,6 +40,7 @@ Reload `unpacked/production` in Chrome. Open Preferences, then Troubleshooting, 
 - Initialized git. Imported the 0.6.1 through 0.7.3 source zips as tagged commits, so history and diffs are available.
 - Moved all zips to `dist/` and changed `build.sh` to write there. Added `.gitignore`, `README.md`, and `docs/` (releasing, privacy tracking, and the policy text).
 - Reviewed the privacy policy against the code; gaps are listed in `docs/PRIVACY.md`.
+- Connected the empty GitHub repository, Navica-Consulting/reckonry-timer-for-karbon, and pushed main with all version tags. Added the Release workflow and `scripts/cws-publish.sh`.
 - v0.7.4: nested preferences restyled as a plain indent (see `context/timer-behavior.md`). Fixed the setup guide naming a "Logging" section that is now "Time entries."
 
 ### 2026-10-23, setup without Karbon session (Claude app)

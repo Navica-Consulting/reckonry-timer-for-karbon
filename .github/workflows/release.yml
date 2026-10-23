@@ -1,0 +1,51 @@
+# On a version tag (v0.7.5 and so on): build, attach the zips to a GitHub release, and, once the
+# store IDs are set as repository variables, upload to the Chrome Web Store and submit for review.
+# Setup steps are in docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # create the GitHub release
+  id-token: write   # sign in to Google Cloud without a stored key
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the manifest version
+        run: |
+          ver=$(python3 -c "import json;print(json.load(open('src/manifest.json'))['version'])")
+          [ "v$ver" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match manifest $ver"; exit 1; }
+          echo "VER=$ver" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*-"$VER"*.zip --title "$GITHUB_REF_NAME" --generate-notes
+
+      - name: Sign in to Google Cloud
+        if: vars.CWS_ITEM_ID != ''
+        id: gcp
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Publish to the Chrome Web Store
+        if: vars.CWS_ITEM_ID != ''
+        env:
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
+          CWS_PUBLISH_TYPE: ${{ vars.CWS_PUBLISH_TYPE }}
+          CWS_TOKEN: ${{ steps.gcp.outputs.access_token }}
+        run: scripts/cws-publish.sh "dist/reckonry-timer-for-karbon-$VER.zip"
