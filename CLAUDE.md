@@ -2,6 +2,10 @@
 
 Chrome MV3 extension for Karbon's timer, published by Navica LLC.
 
+Project context lives in `claude/`: read `claude/CLAUDE.md` and `claude/handoff.md` first.
+Settled decisions are in `claude/context/`, and Karbon's endpoints are in
+`artifacts/capture-summary.md`. Writing style: no em dashes, Oxford comma, short plain sentences.
+
 - Edit only `src/`. `./build.sh` writes `unpacked/production` (app2.karbonhq.com),
   `unpacked/stage` (webapp-stage.karbonhq.com), and zips in `dist/`. Never hand-edit the build
   output, and never publish the stage build.
