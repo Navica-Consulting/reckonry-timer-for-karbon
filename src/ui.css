@@ -15,7 +15,8 @@ h2 { font-size:12px; margin:14px 0 6px; color:var(--muted); text-transform:upper
 [hidden] { display:none !important; }
 
 /* Current timer */
-#timer { border:1px solid var(--line); border-radius:10px; padding:12px; }
+#timer, .card { border:1px solid var(--line); border-radius:10px; padding:12px; }
+.card { margin-bottom:10px; } .card p { margin:0; } .card p + p { margin-top:4px; }
 .row { display:flex; align-items:center; gap:8px; }
 .grow { flex:1; min-width:0; }
 #elapsed { font-size:26px; font-weight:600; font-variant-numeric:tabular-nums; }
@@ -116,9 +117,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .btn.danger { color:#b42318; }
 @media (prefers-color-scheme: dark) { .btn.danger { color:#ff8a80; } }
 .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
-.banner { background:var(--soft); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
-.banner p { margin:0; }
-.banner p + p { margin-top:4px; }
 
 /* Preference groups: radio choices, and settings that depend on the row above */
 fieldset.group { border:0; margin:10px 0 0; min-width:0; }

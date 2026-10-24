@@ -13,6 +13,7 @@ let tick = null;
 let chosen = null;       // the work item or contact picked in the Work field
 let lists = null;        // role and task type lists: { roles, taskTypes }
 let changingWork = false; // the running timer's work is being changed in the card
+let signedOut = false;   // Karbon says this browser is signed out
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 const level = async () => (await chrome.storage.sync.get({ noteLevel: 'auto' })).noteLevel;
@@ -20,14 +21,10 @@ const noteFor = async (event, ctx) => KTNotes.note(event, await level(), ctx);
 // A blank timer (no work item yet) still counts as running.
 const isActive = (s) => !!(s && s.state && s.state !== 'Stopped');
 
-// ---- Status line ----
+// ---- Status line: problems only ----
 // Actions open or reload Karbon on their own when they need a tab, so there is no fix-it link.
 function say(text) {
   $('msg').textContent = text;
-}
-
-function sayError(r) {
-  say((r && r.error) || 'Something went wrong.');
 }
 
 const workOnly = () => !!(timeCfg && timeCfg.workOnly);
@@ -44,6 +41,8 @@ function itemRow(item, { lead, onStart }) {
 // ---- Rendering the current timer ----
 function render(s) {
   current = s;
+  $('signedOut').hidden = !signedOut;
+  if (signedOut) return renderSignedOut();
   const act = isActive(s);
   const st = act ? s.state : 'Stopped';
   $('pill').textContent = !s ? 'Unknown' : st === 'Started' ? 'Running' : st === 'Paused' ? 'Paused' : 'No timer';
@@ -71,6 +70,23 @@ function render(s) {
   draw();
   if (st === 'Started') tick = setInterval(draw, 1000);
   renderQuick();
+}
+
+// Signed out: hide the timer and the start form, and offer only the way back in.
+function renderSignedOut() {
+  clearInterval(tick);
+  $('pill').textContent = 'Signed out';
+  $('pill').className = 'pill';
+  $('timer').hidden = true;
+  $('startBox').hidden = true;
+  say('');
+}
+
+function setSignedOut(on) {
+  if (signedOut === on) return;
+  signedOut = on;
+  render(current);
+  if (!on) { loadRecents(false); loadLookups(); }
 }
 
 // The running timer's work, role, and task type stay visible and editable.
@@ -120,24 +136,31 @@ function renderQuick() {
 
 async function refresh() {
   const r = await send('getState');
-  if (r && r.ok) return render(r.result);
+  if (r && r.ok) { setSignedOut(false); return render(r.result); }
+  if (r && r.code === 'SIGNED_OUT') return setSignedOut(true);
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   if (r && r.code !== 'UNREACHABLE') sayError(r);
 }
 
-async function run(cmd, args, done) {
-  say('Working.');
+// Any reply that says Karbon is signed out swaps the panel to the sign-in view.
+// The panel's Sign in button is then the only way to Karbon's sign-in page.
+function sayError(r) {
+  if (r && r.code === 'SIGNED_OUT') return setSignedOut(true);
+  say((r && r.error) || 'Something went wrong.');
+}
+
+async function run(cmd, args) {
+  say('');
   const r = await send(cmd, args);
   if (!r || !r.ok) { sayError(r); return false; }
-  say(done(r.result));
   refresh();
   return true;
 }
 
 // ---- Timer actions ----
 $('toggle').addEventListener('click', async () => {
-  if (current && current.state === 'Paused') run('resume', { note: await noteFor('manualResume') }, () => 'Resumed.');
-  else run('pause', { note: await noteFor('manualPause') }, () => 'Paused.');
+  if (current && current.state === 'Paused') run('resume', { note: await noteFor('manualResume') });
+  else run('pause', { note: await noteFor('manualPause') });
 });
 
 // Hands off to the finish form, in this panel, when the timer needs details before it can be saved.
@@ -150,7 +173,6 @@ async function toFinishForm({ note, then = null, thenTitle = null, missing }) {
 // Stop and Swap save the entry from the card. Required fields still empty bounce instead of opening a second form.
 // Focus stays on the button: focusing the Work field would open its recents over the red outline.
 const FIELD = { work: 'curQ', role: 'curRole', taskType: 'curTask', notes: 'curNotes' };
-const NOUN = { role: 'a role', taskType: 'a task type', notes: 'a note' };
 
 function missingHere() {
   const m = [];
@@ -161,7 +183,9 @@ function missingHere() {
   return m;
 }
 
+// The red outline and shake say what's missing, so there is no message.
 function bounce(missing) {
+  say('');
   if (missing.includes('work') && current.work) { changingWork = true; renderDetails(current); }
   for (const k of missing) {
     const f = $(FIELD[k]);
@@ -171,29 +195,24 @@ function bounce(missing) {
     f.classList.add('bounce');
     f.addEventListener('animationend', () => f.classList.remove('bounce'), { once: true });
   }
-  const nouns = missing.map((k) => (k === 'work' ? (workOnly() ? 'a work item' : 'a work item or contact') : NOUN[k]));
-  say(missing.includes('notes') ? 'Your firm requires a note on every time entry. Add one first.' : `Choose ${nouns.length > 1 ? `${nouns.slice(0, -1).join(', ')}${nouns.length > 2 ? ',' : ''} and ${nouns.at(-1)}` : nouns[0]} first.`);
 }
 
 // Saves the running timer, or bounces what's missing. Returns the save result, or null.
 async function saveCurrent() {
   const missing = missingHere();
   if (missing.length) { bounce(missing); return null; }
-  say('Working.');
+  say('');
   // Notes edited but not yet saved go on this entry.
-  if (!(await saveNotes(true))) return null;
+  if (!(await saveNotes())) return null;
   const r = await send('stopAndSave', { note: await noteFor('manualStop'), interactive: true });
   if (!r || !r.ok) { sayError(r); return null; }
   if (r.result && r.result.needsCompletion) { bounce(r.result.missing); return null; }
   return r.result || {};
 }
 
-const savedText = (res) => (res.saved ? `Saved a ${res.minutes} minute entry.` : 'No timer to save.');
-
 $('stop').addEventListener('click', async () => {
   const res = await saveCurrent();
   if (!res) return;
-  say(savedText(res));
   refresh();
 });
 
@@ -205,7 +224,6 @@ $('swap').addEventListener('click', async () => {
   const r = await send('start', { workKey: null, linkType: null, roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: await noteFor('manualStart'), interactive: true });
   if (!r || !r.ok) { refresh(); return sayError(r); }
   await refresh();
-  say(`${savedText(res)} New timer started. Choose its work item.`);
 });
 
 // Two presses, so a stray click can't throw time away. The first fills the button red
@@ -225,11 +243,10 @@ $('discard').addEventListener('blur', () => setDiscardArmed(false));
 $('discard').addEventListener('click', async () => {
   if (!discardArmed) return setDiscardArmed(true);
   setDiscardArmed(false);
-  say('Working.');
+  say('');
   const r = await send('discard', {});
   if (!r || !r.ok) return sayError(r);
   await refresh();
-  say('Timer discarded. Press play to start a new one.');
   $('go').focus();
 });
 
@@ -240,20 +257,19 @@ $('work').addEventListener('click', async () => {
 });
 
 // ---- Editing the running timer ----
-async function editCurrent(args, done) {
-  say('Working.');
+async function editCurrent(args) {
+  say('');
   const r = await send('edit', args);
   if (!r || !r.ok) sayError(r);
-  else say(done);
   refresh();
   return !!(r && r.ok);
 }
 
-$('curRole').addEventListener('change', () => editCurrent({ roleKey: $('curRole').value || null }, 'Role updated.'));
-$('curTask').addEventListener('change', () => editCurrent({ taskTypeKey: $('curTask').value || null }, 'Task type updated.'));
+$('curRole').addEventListener('change', () => editCurrent({ roleKey: $('curRole').value || null }));
+$('curTask').addEventListener('change', () => editCurrent({ taskTypeKey: $('curTask').value || null }));
 
 async function setWork(item) {
-  const ok = await editCurrent({ workKey: item.key, linkType: item.linkType || 'WorkItem' }, `Timer is now on ${item.title || 'the item'}.`);
+  const ok = await editCurrent({ workKey: item.key, linkType: item.linkType || 'WorkItem' });
   if (!ok) return;
   openDrop(BOX.cur, false);
   changingWork = false;
@@ -280,7 +296,7 @@ $('curQ').addEventListener('focus', () => {
 });
 
 // Notes save a moment after you stop typing, and when you leave the field.
-async function saveNotes(quiet = false) {
+async function saveNotes() {
   clearTimeout(notesTimer);
   notesTimer = null;
   const text = $('curNotes').value;
@@ -288,7 +304,6 @@ async function saveNotes(quiet = false) {
   const r = await send('edit', { description: text });
   if (!r || !r.ok) { sayError(r); return false; }
   current.description = text;
-  if (!quiet) say('Notes saved.');
   return true;
 }
 $('curNotes').addEventListener('input', () => {
@@ -306,7 +321,6 @@ function choose(item) {
   $('chosen').hidden = false;
   $('picker').hidden = true;
   openDrop(BOX.start, false);
-  say(`${item.title || 'Item'} chosen. Check role and task type, then press play.`);
   $('role').focus();
 }
 
@@ -335,7 +349,7 @@ async function startArgs(item) {
 
 async function startNew(item) {
   const args = await startArgs(item);
-  say('Starting. If Karbon is closed, it opens in a background tab first.');
+  say('');
   const stopNote = await noteFor('manualStop');
   const r = await send('start', { ...args, stopNote, interactive: true });
   if (!r || !r.ok) return sayError(r);
@@ -343,7 +357,6 @@ async function startNew(item) {
   if (r.result && r.result.needsCompletion) {
     return toFinishForm({ note: stopNote, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
   }
-  say(item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.');
   $('desc').value = '';
   $('q').value = '';
   chosen = null;
@@ -462,7 +475,7 @@ for (const box of Object.values(BOX)) {
 
 // ---- Preferences ----
 // The panel keeps Work, Clients, and Auto-switch; everything else is on the settings page.
-bindPrefs($('prefs'), (keys, s, local) => { if (local) say('Preference saved.'); });
+bindPrefs($('prefs'));
 
 // Opening Preferences scrolls it to the top of the panel, so it's clear something happened.
 $('prefsBox').addEventListener('toggle', () => {
@@ -471,13 +484,24 @@ $('prefsBox').addEventListener('toggle', () => {
   $('prefsBox').scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
 });
 
+$('signIn').addEventListener('click', async () => {
+  await chrome.runtime.sendMessage({ type: 'signIn' });
+  window.close();
+});
+
+// Signing in or out anywhere updates the open panel.
+chrome.storage.onChanged.addListener((c, area) => {
+  if (area === 'local' && c.signedIn) setSignedOut(c.signedIn.newValue === false);
+});
+
 $('guide').addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#settings' }); window.close(); });
 $('feedback').addEventListener('click', async () => { await openFeedback(); window.close(); });
 
 // ---- Start ----
 (async () => {
-  // A stopped timer still waiting for its details: show the finish form first.
-  if (await chrome.runtime.sendMessage({ type: 'getPending' })) {
+  signedOut = (await chrome.storage.local.get('signedIn')).signedIn === false;
+  // A stopped timer still waiting for its details: show the finish form first, unless Karbon is signed out.
+  if (!signedOut && await chrome.runtime.sendMessage({ type: 'getPending' })) {
     location.replace('complete.html?mode=popup');
     return;
   }
@@ -493,6 +517,7 @@ $('feedback').addEventListener('click', async () => { await openFeedback(); wind
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
+  if (signedOut) return;
   loadRecents(false);
   loadLookups();
 })();

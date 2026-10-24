@@ -28,7 +28,11 @@ The extension does not send your information to Navica LLC or to anyone else. It
 
 ## Feedback
 
-If you choose to send feedback, the extension opens an email in your own email app. The email includes only the extension version and which settings are turned on. You can review or edit it before you send it.
+If you choose to send feedback, the extension opens a Google Form from Navica LLC in a new tab. The extension fills in only the extension version and which settings are turned on. You can review, edit, or clear them before you submit. Nothing is sent unless you submit the form.
+
+The form asks for your email address only if you'd like a reply, and it is optional. If you give it, Navica LLC uses it only to reply to you. Google processes form responses under Google's privacy policy.
+
+If you'd rather write, you can choose to email us instead. That opens an email in your own email app with the same version and settings filled in.
 
 ## Removing your data
 

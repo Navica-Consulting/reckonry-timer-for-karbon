@@ -57,8 +57,19 @@
   const post = (msg) => window.postMessage({ src: 'kt-page', ...msg }, location.origin);
   const log = (...a) => { if (K.debug) console.info('[KT]', ...a); };
 
+  // Karbon's own word on whether this tab is signed in: true, false, or null before the app has booted.
+  function loggedIn() {
+    try {
+      const app = window.StagingApp;
+      const inst = app && (app.__deprecatedInstance__ || (app._applicationInstances && [...app._applicationInstances][0]));
+      const ses = inst && inst.lookup && inst.lookup('service:session');
+      return ses ? !!ses.isLoggedIn : null;
+    } catch { return null; }
+  }
+
   // Keys for the shared API code. The tenant in this tab's URL wins over the cookie's default tenant.
   function keys() {
+    if (loggedIn() === false) throw Object.assign(new Error(KT_SIGNED_OUT), { signedOut: true });
     if (!(K.tenant && K.user && K.base)) learnFromPage();
     if (!K.base) {
       try { performance.getEntriesByType('resource').forEach((e) => learnBase(e.name)); } catch {}
@@ -114,7 +125,7 @@
     if (!K.user && user && K.tenant === tenant) K.user = user;
     if (!K.base && base) K.base = base;
     learnFromPage();
-    return { ready: !!(K.tenant && K.user && K.base), tenant: K.tenant, user: K.user, base: K.base };
+    return { ready: !!(K.tenant && K.user && K.base), loggedIn: loggedIn(), tenant: K.tenant, user: K.user, base: K.base };
   };
   const LOCAL = { setDebug, setKeys };
 
@@ -128,7 +139,7 @@
       post({ id: m.id, ok: true, result });
     } catch (e) {
       console.warn('[KT] command failed', m.cmd, String((e && e.message) || e));
-      post({ id: m.id, ok: false, error: String((e && e.message) || e) });
+      post({ id: m.id, ok: false, error: String((e && e.message) || e), signedOut: !!(e && e.signedOut) });
     }
   });
 })();

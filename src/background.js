@@ -20,6 +20,7 @@ async function applyIcon() {
   await chrome.action.setIcon({ path });
 }
 const cachedState = async () => (await chrome.storage.session.get('state')).state || null;
+const isSignedOut = async () => (await chrome.storage.local.get('signedIn')).signedIn === false;
 
 // ---- Elapsed time, badge, and tooltip ----
 function elapsedSeconds(s) {
@@ -40,7 +41,9 @@ function elapsedText(s) {
 }
 
 // badgeWhere: 'everywhere', 'away' (every site except Karbon, which shows its own timer), or 'never'.
-function badgeFor(s, cfg, waiting) {
+function badgeFor(s, cfg, waiting, out) {
+  // Signed out of Karbon: no timer is shown anywhere, so the badge says something is wrong instead.
+  if (out) return { text: '!', color: COLORS.none };
   if (cfg.badgeWhere === 'never') return { text: '' };
   // A timer you stopped that still needs its details: "!" until it is finished.
   if (waiting && active(s)) return { text: '!', color: COLORS.long, dark: true };
@@ -50,7 +53,8 @@ function badgeFor(s, cfg, waiting) {
   return { text: elapsedText(s), color: long ? COLORS.long : COLORS.run, dark: long };
 }
 
-function tooltip(s, waiting) {
+function tooltip(s, waiting, out) {
+  if (out) return 'Karbon timer: you are signed out of Karbon. Sign in to see your timer.';
   if (!active(s)) return 'Karbon timer: no timer running';
   if (waiting) return 'Karbon timer paused: choose a work item to finish saving it';
   const m = Math.floor(elapsedSeconds(s) / 60);
@@ -61,22 +65,22 @@ function tooltip(s, waiting) {
 }
 
 async function refreshBadge() {
-  const [s, cfg, waiting] = await Promise.all([cachedState(), settings(), pendingFinish()]);
-  const b = badgeFor(s, cfg, !!waiting);
+  const [s, cfg, waiting, out] = await Promise.all([cachedState(), settings(), pendingFinish(), isSignedOut()]);
+  const b = badgeFor(s, cfg, !!waiting, out);
   await chrome.action.setBadgeText({ text: b.text });
   if (b.text) {
     await chrome.action.setBadgeBackgroundColor({ color: b.color });
     if (chrome.action.setBadgeTextColor) await chrome.action.setBadgeTextColor({ color: b.dark ? '#1f2933' : '#ffffff' });
   }
-  await chrome.action.setTitle({ title: tooltip(s, !!waiting) });
+  await chrome.action.setTitle({ title: tooltip(s, !!waiting, out) });
   // Karbon tabs get their own badge: blank in "away" mode (Karbon shows its own timer), the same badge otherwise.
-  const onKarbon = cfg.badgeWhere === 'everywhere' ? b.text : '';
+  const onKarbon = cfg.badgeWhere === 'everywhere' || out ? b.text : '';
   const tabs = await chrome.tabs.query({ url: `${KARBON}*` });
   await Promise.all(tabs.map(async (t) => {
     await chrome.action.setBadgeText({ tabId: t.id, text: onKarbon });
     if (onKarbon) await chrome.action.setBadgeBackgroundColor({ tabId: t.id, color: b.color });
   }).map((p) => p.catch(() => {})));
-  await checkLongTimer(s, cfg);
+  if (!out) await checkLongTimer(s, cfg);
 }
 
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
@@ -104,6 +108,7 @@ async function checkLongTimer(s, cfg) {
 
 chrome.notifications.onClicked.addListener(async (id) => {
   chrome.notifications.clear(id);
+  if (await isSignedOut()) return;
   if (id.startsWith('finish:')) return openFinishWindow();
   const s = await cachedState();
   if (s && s.work) openWork({ tenant: s.tenant, work: s.work, linkType: s.linkType });
@@ -164,14 +169,18 @@ const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard',
 const WRITES = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume']);
 
 // UNREACHABLE means neither Karbon's API nor a Karbon tab answered a read.
+// SIGNED_OUT means Karbon says this browser is signed out. No tab is opened for it.
 async function toKarbon(cmd, args) {
   const before = direct.writes();
   try {
     const result = await direct.run(cmd, args);
     if (direct.writes() !== before) noteDirectWrites({ ok: true });
+    await setSignedIn(true);
     return { ok: true, result };
   } catch (e) {
+    if (e.signedOut) return signedOutReply();
     if (!e.reach) return { ok: false, error: e.message };
+    if (await isSignedOut()) return signedOutReply();
     if (WRITES.has(cmd) && !e.noKeys) noteDirectWrites({ ok: false, error: e.message });
     return viaTab(cmd, args, e.message);
   }
@@ -181,6 +190,7 @@ async function viaTab(cmd, args, why) {
   const tabs = await karbonTabs();
   for (const t of tabs) {
     const r = await askTab(t.id, cmd, args);
+    if (r && r.code === 'SIGNED_OUT') return (await confirmSignedOut()) ? signedOutReply() : { ok: false, error: why };
     if (r) return r;
   }
   if (!NEEDS_TAB.has(cmd)) return { ok: false, code: 'UNREACHABLE', error: why };
@@ -193,6 +203,58 @@ async function noteDirectWrites({ ok, error = null }) {
   const { directWrites: was } = await chrome.storage.local.get('directWrites');
   if (was && was.ok === ok) return;
   await chrome.storage.local.set({ directWrites: { ok, error, at: Date.now() } });
+}
+
+// ---- Signed out of Karbon ----
+// The stored signedIn flag hides the timer in the panel and badge.
+async function setSignedIn(on) {
+  const { signedIn } = await chrome.storage.local.get('signedIn');
+  if (signedIn === on) return;
+  await chrome.storage.local.set({ signedIn: on });
+  await refreshBadge();
+}
+
+async function signedOutReply() {
+  await setSignedIn(false);
+  return { ok: false, code: 'SIGNED_OUT', error: KT_SIGNED_OUT };
+}
+
+// Asks Karbon whether this browser is signed in. signedOut is set only when Karbon says so plainly:
+// a 401, or its sign-in page where data should be. A refused or failed call leaves it unknown.
+async function sessionCheck(k) {
+  const out = { ok: false, status: 0, signedOut: false };
+  if (!k || !k.base || !k.tenant || !k.user) return out;
+  try {
+    const r = await fetch(`${k.base}/api/${k.tenant}/userEnvironmentSettings/${k.user}`, { credentials: 'include' });
+    out.status = r.status;
+    const j = r.ok ? await r.json().catch(() => null) : null;
+    const env = j && j.userEnvironmentSettings;
+    out.ok = !!(env && env.userProfilePermaKey === k.user);
+    out.signedOut = r.status === 401 || (r.ok && !j);
+    if (env && env.tenantName) out.firmName = env.tenantName;
+  } catch (e) { out.error = String((e && e.message) || e); }
+  return out;
+}
+
+// A Karbon tab reports it is signed out. Karbon's API gets the last word when it can answer.
+async function confirmSignedOut() {
+  const c = await sessionCheck(await chrome.storage.local.get(['tenant', 'user', 'base']));
+  if (c.ok) { await setSignedIn(true); return false; }
+  await setSignedIn(false);
+  return true;
+}
+
+// The panel's Sign in button: opens Karbon, which shows its sign-in page, in front.
+async function openSignIn() {
+  const { tenant } = await chrome.storage.local.get('tenant');
+  const url = tenant ? `${KARBON}${tenant}/` : KARBON;
+  const tab = await karbonTab();
+  if (tab) {
+    await chrome.tabs.update(tab.id, { url, active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
 }
 
 // Karbon's page for each kind of timer target.
@@ -223,7 +285,15 @@ async function promptFinish({ note = null, then = null, thenTitle = null, missin
   return { ok: true };
 }
 
+// The toolbar panel shows the finish form whenever one is pending, so open the panel itself.
+// A separate window is the fallback: openPopup needs Chrome 127+ and a focused browser window.
 async function openFinishWindow() {
+  try {
+    await chrome.action.openPopup();
+    return;
+  } catch (e) {
+    console.info('[KT] panel could not open, using a window:', e && e.message);
+  }
   const { finishWindowId } = await chrome.storage.session.get('finishWindowId');
   if (finishWindowId) {
     try {
@@ -275,6 +345,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     toKarbon(msg.cmd, msg.args).then(sendResponse);
     return true;
   }
+  if (msg.type === 'signIn') {
+    openSignIn().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (msg.type === 'pageSignedOut') {
+    confirmSignedOut().then(sendResponse, () => sendResponse(false));
+    return true;
+  }
   if (msg.type === 'getCached') {
     cachedState().then(sendResponse);
     return true;
@@ -320,6 +398,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // Karbon answers without opening anything: the direct check passed, or a Karbon tab is open.
 async function canReach() {
+  if (await isSignedOut()) return false;
   const { directApi } = await chrome.storage.local.get('directApi');
   return !!(directApi && directApi.ok) || !!(await karbonTab());
 }
@@ -333,6 +412,8 @@ async function handleState(state) {
   // Learn the default role and task type from any timer Karbon starts.
   if (state && state.work && state.roleKey && state.taskTypeKey) Object.assign(keep, { roleKey: state.roleKey, taskTypeKey: state.taskTypeKey });
   if (Object.keys(keep).length) await chrome.storage.local.set(keep);
+  // Karbon only sends a timer to a signed-in session.
+  if (state) await setSignedIn(true);
   // Saved or discarded somewhere else (Karbon itself, another device): nothing is left to finish.
   if (state && state.state === 'Stopped') await chrome.storage.session.remove('pendingFinish');
   await refreshBadge();
@@ -342,6 +423,8 @@ async function handleState(state) {
 // With no timer running, it starts a blank timer with your last-used role and task type.
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'toggle-timer') return;
+  // Signed out: nothing to toggle. The badge already says so.
+  if (await isSignedOut()) return;
   const cfg = await settings();
   const s = await cachedState();
   if (!active(s)) {
@@ -349,8 +432,8 @@ chrome.commands.onCommand.addListener(async (command) => {
     await toKarbon('start', { roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: KTNotes.note('manualStart', cfg.noteLevel) });
     return;
   }
-  if (s.state === 'Started') await toKarbon('pause', { note: KTNotes.note('manualPause', cfg.noteLevel) });
-  else await toKarbon('resume', { note: KTNotes.note('manualResume', cfg.noteLevel) });
+  const cmd = s.state === 'Started' ? 'pause' : 'resume';
+  await toKarbon(cmd, { note: KTNotes.note(cmd === 'pause' ? 'manualPause' : 'manualResume', cfg.noteLevel) });
 });
 
 // ---- Lock and idle ----
@@ -432,7 +515,20 @@ async function onDayStart() {
 }
 
 // ---- Heartbeat: badge refresh and sleep-gap detection ----
+// While a timer shows as running, or Karbon is signed out, ask Karbon each minute,
+// so a sign-out hides the timer and a sign-in elsewhere brings it back.
+async function checkSignIn() {
+  if (!active(await cachedState()) && !(await isSignedOut())) return;
+  try {
+    await direct.run('getState');
+    await setSignedIn(true);
+  } catch (e) {
+    if (e.signedOut) await setSignedIn(false);
+  }
+}
+
 async function onHeartbeat() {
+  await checkSignIn().catch(() => {});
   await refreshBadge();
   const now = Date.now();
   const { lastBeat } = await chrome.storage.local.get('lastBeat');
@@ -497,32 +593,25 @@ async function readBootstrapCookie() {
 async function learnAccount(fromPage = null) {
   const k = (await readBootstrapCookie()) || (fromPage && fromPage.tenant && fromPage.user ? fromPage : null);
   if (!k) {
-    // Keep keys an open Karbon tab already reported; only say "not signed in" when there are none.
-    const known = await chrome.storage.local.get(['user']);
-    await chrome.storage.local.set({ signedIn: !!known.user, cookieNote });
-    return { signedIn: !!known.user };
+    // Keep keys an open Karbon tab already reported; only say "not signed in" when there are none,
+    // or when Karbon says this browser signed out (the cookie can go away at sign-out).
+    const known = await chrome.storage.local.get(['tenant', 'user', 'base', 'signedIn']);
+    const out = !known.user || known.signedIn === false || (await sessionCheck(known)).signedOut;
+    await chrome.storage.local.set({ cookieNote });
+    await setSignedIn(!out);
+    return { signedIn: !out };
   }
   const prev = await chrome.storage.local.get(['user']);
-  const keep = { signedIn: true, tenant: k.tenant, user: k.user };
+  const keep = { tenant: k.tenant, user: k.user };
   if (k.base) keep.base = k.base;
   // Someone else signed in on this browser: last-used role and task type belonged to the old user.
   if (prev.user && prev.user !== k.user) await chrome.storage.local.remove(['roleKey', 'taskTypeKey', 'lookups']);
   await chrome.storage.local.set(keep);
-  let direct = { ok: false, status: 0 };
-  if (k.base) {
-    try {
-      const r = await fetch(`${k.base}/api/${k.tenant}/userEnvironmentSettings/${k.user}`, { credentials: 'include' });
-      direct.status = r.status;
-      if (r.ok) {
-        const j = await r.json().catch(() => null);
-        const env = j && j.userEnvironmentSettings;
-        direct.ok = !!(env && env.userProfilePermaKey === k.user);
-        if (env && env.tenantName) keep.firmName = env.tenantName;
-      }
-    } catch (e) { direct.error = String(e && e.message || e); }
-  }
+  const { firmName, signedOut, ...direct } = await sessionCheck(k);
+  if (firmName) keep.firmName = firmName;
   await chrome.storage.local.set({ ...keep, cookieNote, keySource: fromPage && k === fromPage ? 'tab' : 'cookie', directApi: { ...direct, at: Date.now() } });
-  return { signedIn: true, direct };
+  await setSignedIn(!signedOut);
+  return { signedIn: !signedOut, direct };
 }
 
 chrome.cookies.onChanged.addListener(({ cookie }) => {

@@ -87,7 +87,10 @@ async function bindPrefs(form, onChange = () => {}) {
   return s;
 }
 
-// Feedback: a prefilled email with the version and settings only, never client or work data.
+// Feedback: a Google Form with the version and settings prefilled, never client or work data.
+// The email stays for people who'd rather write.
+const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdSTWLnWUb8Pyfk3cuXpKfL9JGxfZ6ciFbuBzF_108db4y7LA/viewform';
+const FEEDBACK_DETAILS_ENTRY = 'entry.1196218190'; // The form's "Extension details" field.
 const FEEDBACK_EMAIL = 'max@navicaconsulting.com'; // Interim address until a permanent one is chosen.
 
 function supportDetails(s, workOnly) {
@@ -105,11 +108,20 @@ function supportDetails(s, workOnly) {
   ].join('\n');
 }
 
-async function openFeedback() {
+async function currentDetails() {
   const s = await chrome.storage.sync.get(DEFAULTS);
   const { timeCfg } = await chrome.storage.local.get('timeCfg');
+  return supportDetails(s, !!(timeCfg && timeCfg.workOnly));
+}
+
+async function openFeedback() {
+  const url = `${FEEDBACK_FORM}?usp=pp_url&${FEEDBACK_DETAILS_ENTRY}=${encodeURIComponent(await currentDetails())}`;
+  return chrome.tabs.create({ url });
+}
+
+async function emailFeedback() {
   const v = chrome.runtime.getManifest().version;
-  const body = ['What happened, or what would you like to see?', '', '', '', '---', supportDetails(s, !!(timeCfg && timeCfg.workOnly))].join('\n');
+  const body = ['What happened, or what would you like to see?', '', '', '', '---', await currentDetails()].join('\n');
   const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(`Reckonry Timer for Karbon feedback (v${v})`)}&body=${encodeURIComponent(body)}`;
   return chrome.tabs.create({ url });
 }

@@ -196,6 +196,7 @@ addEventListener('scroll', markNav, { passive: true });
 // chrome:// pages can't be opened from a plain link in an extension, only through the tabs API.
 $('shortcuts').addEventListener('click', () => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }));
 $('feedback').addEventListener('click', openFeedback);
+$('emailFeedback').addEventListener('click', emailFeedback);
 $('copyDetails').addEventListener('click', async () => {
   const s = await chrome.storage.sync.get(DEFAULTS);
   try {

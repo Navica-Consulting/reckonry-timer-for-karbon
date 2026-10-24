@@ -66,6 +66,13 @@
     <textarea id="curNotes" rows="2" placeholder="Add a note to this timer"></textarea>
   </section>
 
+  <!-- Signed out of Karbon: no timer or start form, so no one records time without knowing it -->
+  <section id="signedOut" class="start" aria-labelledby="outHeading" hidden>
+    <h2 id="outHeading" class="panel-title">You're signed out of Karbon</h2>
+    <p>Sign in to Karbon to see your timer and record time.</p>
+    <button id="signIn" type="button" class="btn primary">Sign in to Karbon</button>
+  </section>
+
   <!-- Start, shown only with no timer running: same field order as Karbon's own timer (Work, Role, Task type, Notes) -->
   <section id="startBox" class="start" aria-labelledby="startHeading">
     <div class="row">

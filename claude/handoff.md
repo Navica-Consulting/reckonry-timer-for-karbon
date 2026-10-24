@@ -14,6 +14,7 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review. It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
 
 ## Open threads
+- Signed out of Karbon: 0.7.19 hides the timer when Karbon is signed out and offers a Sign in button that opens Karbon's sign-in page. 0.7.21 removed the page warning and the automatic opens (Max). It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured. Tested only with stubbed Chrome APIs (waiting on: a live sign-out test).
 - First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, moves the v0.7.4 tag to `main` (same source; `main` has the workflow) and pushes it to submit 0.7.4. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
 - Privacy policy: the hosted policy (effective 2026-10-23) predates the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, and Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md`; the policy source is `docs/privacy-policy.md` (waiting on: Max).
 - Tab-free API calls: 0.7.18 runs every command from the background worker through `src/karbon.js`, shared with `page.js`. A Karbon tab is used only when Karbon can't be reached directly, and then an action reloads the tab or opens one. Max confirmed on 2026-10-24 that play works with Karbon closed and the Connection line reports tab-free timer changes. Search, recents, pause, stop, and the lock and day-end paths haven't been tried live without a tab (waiting on: Max's use).
@@ -40,6 +41,19 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-24, consistent page cards and finish form in the panel (Claude Code)
+- Toasts, the no-work-item prompt, and the sign-in warning in `content.js` share one card (`makeCard`) built from the panel's tokens, with a status pill. Light and dark follow the system.
+- The finish form now opens in the toolbar panel via `chrome.action.openPopup()`, with the old window as a fallback. No new permission.
+- The finish form matches the timer card: bordered card, 26px time, role and task type side by side, trash icon for Discard.
+- Bumped to 0.7.20 and rebuilt. Tested in the browser pane with stubbed Chrome APIs (`cards-preview`). Not yet loaded in Chrome, so `openPopup` from a page prompt is untested live.
+
+### 2026-10-24, signed out of Karbon (Claude Code)
+- Max found the panel showing a running timer while Karbon was on its sign-in page.
+- 0.7.19: a 401 or an HTML answer marks the browser signed out (`signedIn: false`). The panel then shows only "You're signed out of Karbon" and a Sign in button. The badge shows a red "!", and Karbon pages show a sign-in warning. Actions, the shortcut, notifications, and the finish form open Karbon's sign-in page in front. No background tab is opened while signed out.
+- The heartbeat reads the stopwatch each minute while a timer shows or while signed out, so a sign-out or sign-in is noticed. A cookie removal also triggers a check. Privacy review added to `docs/PRIVACY.md`.
+- Tested the panel and the page warning in the browser pane with stubbed Chrome APIs only.
+- 0.7.21: Max dropped the page warning and every automatic open. Only the panel's Sign in button opens Karbon's sign-in page.
+
 ### 2026-10-23 and 24, Swap and Discard on the timer card (Claude Code)
 - 0.7.14 asked "Save and switch, or Discard and switch?" from the start panel. Max rejected the two forms.
 - 0.7.15 and 0.7.16: one form at a time. With a timer running, only its card shows, with Pause, Stop, Swap, and Discard icons in one row. Stop and Swap bounce empty required fields instead of opening the finish form, and focus stays on the button so the Work recents don't cover the red outline. Swap starts a blank timer with the last-used role and task type. Discard takes two presses; play then starts a new timer.

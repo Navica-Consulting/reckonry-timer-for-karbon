@@ -3,6 +3,8 @@
 // and may be async. Errors that mean Karbon couldn't be reached carry reach: true, so the
 // background knows a Karbon tab might still work.
 // eslint-disable-next-line no-unused-vars
+const KT_SIGNED_OUT = 'You are signed out of Karbon. Sign in to Karbon, then try again.';
+// eslint-disable-next-line no-unused-vars
 function KTKarbon(env) {
   let K = { tenant: null, user: null, base: null };
   let sw = null;      // the last stopwatch read
@@ -10,6 +12,8 @@ function KTKarbon(env) {
   let writes = 0;     // successful writes so far
   const log = (...a) => env.log && env.log(...a);
   const unreachable = (msg) => Object.assign(new Error(msg), { reach: true });
+  // A 401, or Karbon's sign-in page where data should be, means this browser is signed out of Karbon.
+  const signedOut = () => Object.assign(new Error(KT_SIGNED_OUT), { reach: true, signedOut: true });
 
   const summarize = (s) => s && {
     state: s.stopwatchState,
@@ -81,8 +85,9 @@ function KTKarbon(env) {
       throw unreachable(`Could not reach Karbon for ${where}.`);
     }
     log(method, K.base + mask(path), res.status);
-    // Signed out, or Karbon refused a call that didn't come from its own page.
-    if (res.status === 401 || res.status === 403) throw unreachable(`Karbon returned ${res.status} for ${where}`);
+    if (res.status === 401) throw signedOut();
+    // Karbon refused a call that didn't come from its own page.
+    if (res.status === 403) throw unreachable(`Karbon returned ${res.status} for ${where}`);
     if (!res.ok) throw new Error(`Karbon returned ${res.status} for ${where}`);
     if (method !== 'GET') writes++;
     const text = await res.text();
@@ -90,7 +95,7 @@ function KTKarbon(env) {
     try {
       return JSON.parse(text);
     } catch {
-      throw unreachable(`Karbon sent a page instead of data for ${where}. Check that you're signed in to Karbon.`);
+      throw signedOut();
     }
   }
 

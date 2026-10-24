@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="ui.css">
   <style>
     body.window { width:auto; max-width:440px; margin:0 auto; }
-    #elapsedBig { font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; }
+    #elapsedBig { font-size:26px; font-weight:600; font-variant-numeric:tabular-nums; }
+    #why { color:var(--muted); }
     .fixed { border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
     .fixed .t { font-weight:600; }
   </style>
@@ -19,7 +20,7 @@
     <span id="pill" class="pill paused">Paused</span>
   </header>
 
-  <div class="banner">
+  <div class="card">
     <p id="elapsedBig" aria-hidden="true"></p>
     <p id="why"></p>
   </div>
@@ -39,22 +40,30 @@
     </div>
     <p id="workErr" class="err" hidden></p>
 
-    <label for="role" class="field">Role <span id="roleReq" class="req"></span></label>
-    <select id="role" aria-describedby="roleErr"></select>
-    <p id="roleErr" class="err" hidden></p>
-
-    <label for="taskType" class="field">Task type <span id="taskTypeReq" class="req"></span></label>
-    <select id="taskType" aria-describedby="taskTypeErr"></select>
-    <p id="taskTypeErr" class="err" hidden></p>
+    <div class="pair">
+      <div>
+        <label for="role" class="field">Role <span id="roleReq" class="req"></span></label>
+        <select id="role" aria-describedby="roleErr"></select>
+        <p id="roleErr" class="err" hidden></p>
+      </div>
+      <div>
+        <label for="taskType" class="field">Task type <span id="taskTypeReq" class="req"></span></label>
+        <select id="taskType" aria-describedby="taskTypeErr"></select>
+        <p id="taskTypeErr" class="err" hidden></p>
+      </div>
+    </div>
 
     <label for="desc" class="field">Notes <span id="notesReq" class="req"></span></label>
-    <textarea id="desc" rows="3" aria-describedby="notesErr"></textarea>
+    <textarea id="desc" rows="2" aria-describedby="notesErr"></textarea>
     <p id="notesErr" class="err" hidden></p>
 
     <div class="actions">
       <button id="save" type="submit" class="btn primary">Save time entry</button>
       <button id="keep" type="button" class="btn">Keep paused</button>
-      <button id="discard" type="button" class="btn danger">Discard</button>
+      <!-- Same trash icon as the panel's timer card; the first press arms it red. -->
+      <button id="discard" type="button" class="icon danger" aria-label="Discard timer" title="Discard timer" style="margin-left:auto; align-self:center">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg>
+      </button>
     </div>
   </form>
 

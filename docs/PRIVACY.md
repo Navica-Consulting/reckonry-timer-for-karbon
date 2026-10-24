@@ -45,11 +45,13 @@ or taken down:
 | Settings, including the toolbar icon color (0.7.5), contact reminders (0.7.7), and contact auto-switch (0.7.11) | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
 | Notes on time entries | Extension | Karbon time entry | Sent to Karbon only |
-| Feedback email (version, on/off settings) | User clicks Send feedback | Not stored | Only if the user sends it |
+| Feedback form (version, on/off settings prefilled; optional email typed by the user) | User clicks Send feedback | Not stored by the extension; Google Forms and its Sheet | Only if the user submits it |
+| Feedback email (version, on/off settings) | User clicks Email us instead on the settings page | Not stored | Only if the user sends it |
 | Diagnostic info (cookie lookup notes, connection check, whether timer changes work without a Karbon tab) | Extension | `storage.local` | No |
 
 Network destinations: `app2.karbonhq.com` and Karbon's regional API hosts (`*.karbonhq.com`).
-Nothing else.
+The extension makes no other calls. Send feedback opens a Google Form link (`docs.google.com`)
+that carries the version and settings in its query string.
 
 Settings and help page review (2026-10-23, 0.7.14): `welcome.html` became the settings page and
 is registered as `options_ui`, which is not a permission. No new permissions, host access, storage
@@ -66,6 +68,26 @@ background. One new `storage.local` key, `directWrites`, records whether timer c
 without a tab, with the time and any error text, for the Connection line. No new permissions or
 host access. The policy's open item about calling Karbon's API from the background worker now
 covers all timer calls, not just the connection check.
+
+Signed-out handling review (2026-10-24, 0.7.19): the extension now notices when Karbon is signed
+out (a 401, or Karbon's sign-in page where data should be) and hides the timer. While a timer shows
+as running, or while signed out, the background reads the stopwatch once a minute to notice a
+sign-out or a sign-in. It also reuses the existing `userEnvironmentSettings` check when the
+bootstrap cookie goes away. Same destinations and the same calls as before, just more often. The
+existing `storage.local` key `signedIn` now turns false on a sign-out. 0.7.21 dropped the
+sign-in warning on Karbon pages; nothing is added to Karbon's pages for it. No new permissions, host access, storage keys, or kinds of data. No
+inventory change.
+
+Feedback form review (2026-10-24, 0.7.19): Send feedback now opens a Google Form in a new tab
+instead of a `mailto:` link. The link carries the same version and settings text as before, in the
+form's "Extension details" field, which the user can edit or clear. Nothing personal goes in the
+URL. The form asks for an optional email, used only to reply, typed by the user on Google's page
+and never read or stored by the extension. If opt-ins (breakage alerts, newsletter) are added to
+the form later, update the policy's Feedback section to name them. The `mailto:` stays on the
+settings page as "Email us instead." No new permissions, host access, or storage keys. The policy's
+Feedback section is updated in `docs/privacy-policy.md`, which needs a new effective date and a
+copy to the Google Site. Store Privacy tab: the extension itself still collects no personal data,
+so the data-use answers should not change; confirm before submitting.
 
 ## Open items
 

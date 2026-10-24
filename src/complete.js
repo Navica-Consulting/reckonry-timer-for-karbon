@@ -1,6 +1,6 @@
 // Finish form: collects what a timer needs before Karbon will save it (a work item or contact, plus a role,
-// task type, or note when the firm requires them). Opens in the toolbar panel (mode=popup) or in its own
-// small window (mode=window) after an automatic switch or an end-of-day pause.
+// task type, or note when the firm requires them). Opens in the toolbar panel (mode=popup), which the
+// background also opens after an automatic switch; a small window (mode=window) is the fallback.
 const MODE = new URLSearchParams(location.search).get('mode') === 'window' ? 'window' : 'popup';
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 
@@ -178,9 +178,16 @@ $('discard').addEventListener('click', async () => {
   if (!discardArmed) {
     discardArmed = true;
     const mins = state ? Math.max(1, Math.ceil(elapsedSeconds(state) / 60)) : 0;
-    $('discard').textContent = `Press again to discard ${mins} min`;
-    say(`Press Discard again to throw away ${mins} minutes. This cannot be undone.`);
-    setTimeout(() => { discardArmed = false; $('discard').textContent = 'Discard'; }, 6000);
+    $('discard').setAttribute('aria-label', `Press again to discard ${mins} minutes`);
+    $('discard').title = `Press again to discard ${mins} minutes`;
+    $('discard').classList.add('armed');
+    say(`Press the trash button again to throw away ${mins} minutes. This cannot be undone.`);
+    setTimeout(() => {
+      discardArmed = false;
+      $('discard').setAttribute('aria-label', 'Discard timer');
+      $('discard').title = 'Discard timer';
+      $('discard').classList.remove('armed');
+    }, 6000);
     return;
   }
   const r = await chrome.runtime.sendMessage({ type: 'discardTimer' });
