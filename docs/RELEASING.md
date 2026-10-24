@@ -31,7 +31,12 @@ store zip and submits it for review.
   Store listing and Privacy tabs filled in. After that, the workflow can upload and publish.
 - Privacy tab changes, such as a justification for a new permission, are always made by hand.
 
-## Automatic store upload (setup in progress)
+## Automatic store upload (set up and tested 2026-10-23)
+
+Google Cloud project: `reckonry-timer-for-karbon`. Service account:
+`cws-publisher@reckonry-timer-for-karbon.iam.gserviceaccount.com`. The steps below are a record
+of how it was set up. If the service account binding is refused right after the account is
+created, wait a minute and run that one command again.
 
 The workflow can also upload and submit for review. It signs in to Google Cloud with Workload
 Identity Federation, so no service account key is stored anywhere, and only this repository can
