@@ -11,6 +11,7 @@
   function retire() {
     window.removeEventListener('message', onPageMessage);
     loops.forEach(clearInterval);
+    clearTimers();
     removeToast();
     removePrompt();
   }
@@ -165,7 +166,7 @@
     removeToast();
     if (!item) return;
     chrome.storage.sync.get(DEFAULTS).then((s) => {
-      timers.push(setTimeout(() => onOpen(item, s), SETTLE_MS));
+      wait(SETTLE_MS, () => onOpen(item, s));
     });
   }, 500));
 
@@ -206,8 +207,10 @@
   // Auto-switch is set separately for work items and contacts.
   const switchesTo = (item, s) => (item.linkType === 'WorkItem' ? s.autoSwitch : s.autoSwitchContacts);
 
+  // A wait can outlast the extension, so each one checks it is still connected before acting.
+  const wait = (ms, fn) => timers.push(setTimeout(() => (alive() ? fn() : retire()), ms));
   // The settings count from when the page opened, which includes the settle delay.
-  const later = (seconds, fn) => timers.push(setTimeout(fn, Math.max(0, (Number(seconds) || 0) * 1000 - SETTLE_MS)));
+  const later = (seconds, fn) => wait(Math.max(0, (Number(seconds) || 0) * 1000 - SETTLE_MS), fn);
 
   async function startArgs(item, extra) {
     const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
