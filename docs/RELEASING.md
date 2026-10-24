@@ -16,19 +16,16 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
    ```
 
 5. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches the
-   manifest, builds, and attaches the zips to a GitHub release.
-6. Download `reckonry-timer-for-karbon-<version>.zip` from that release (or use `dist/`), and
-   upload it in the Developer Dashboard under Package. Never upload the `-stage` zip. Submit for
-   review. A new version can't be submitted while another is still in review.
+   manifest, builds, attaches the zips to a GitHub release, uploads the store zip, and submits it
+   for review. It goes live after approval. Check the run under Actions on GitHub.
 
-Once the automatic upload below is set up, step 6 happens on its own: the workflow uploads the
-store zip and submits it for review.
+A new version can't be submitted while another is still in review, so wait for approval before
+tagging. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub
+release or `dist/`, never the `-stage` zip.
 
 ## Before the first public release
 
 - Drop "(beta draft)" from `name` in `src/manifest.json`.
-- The first upload of a new item has to be done by hand in the Developer Dashboard, with the
-  Store listing and Privacy tabs filled in. After that, the workflow can upload and publish.
 - Privacy tab changes, such as a justification for a new permission, are always made by hand.
 
 ## Automatic store upload (set up and tested 2026-10-23)
