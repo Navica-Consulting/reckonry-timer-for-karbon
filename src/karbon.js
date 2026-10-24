@@ -314,19 +314,25 @@ function KTKarbon(env) {
   const ACTIVE_STATUSES = ['InProgress', 'Waiting', 'ReadyToStart', 'Planned'];
   const LINK_TYPES = { WorkItem: 'WorkItem', contact: 'Contact', organization: 'Organization', 'client-group': 'ClientGroup' };
 
+  // A work result's subtitle reads "Client - Assigned to Name". Only the client is shown or used.
+  const workClient = (x) => (x.subtitle || '').replace(/ - (Assigned to .*|Unassigned.*)$/, '');
+
   async function search({ term, kind = 'work', take = 6 }) {
     const q = new URLSearchParams({ searchTerm: term, skip: '0', take: String(take), filterType: kind, showEmailAsSubtitle: 'false' });
     if (kind === 'work') ACTIVE_STATUSES.forEach((s) => q.append('statuses[]', s));
     const j = await call('GET', `/search/api/${K.tenant}/globalSearchItems?${q}`);
     return ((j && j.globalSearchItems) || [])
       .filter((x) => LINK_TYPES[x.entityType])
-      .map((x) => ({ key: x.id, linkType: LINK_TYPES[x.entityType], title: x.title, subtitle: x.subtitle || '' }));
+      .map((x) => {
+        const client = x.entityType === 'WorkItem' ? workClient(x) : '';
+        return { key: x.id, linkType: LINK_TYPES[x.entityType], title: x.title, subtitle: client || x.subtitle || '', client };
+      });
   }
 
   async function recents({ take = 6 } = {}) {
     const j = await call('GET', `/tenant/api/${K.tenant}/recentsList?entityType=WorkItems&skip=0&take=${take}`);
     return ((j && j.recentsLists) || []).map((x) => ({
-      key: x.id, linkType: 'WorkItem', title: x.entityName, subtitle: x.workItemClientName || '',
+      key: x.id, linkType: 'WorkItem', title: x.entityName, subtitle: x.workItemClientName || '', client: x.workItemClientName || '',
     }));
   }
 

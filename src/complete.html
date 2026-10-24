@@ -24,32 +24,10 @@
   </div>
 
   <form id="finish" novalidate>
-    <!-- A timer on a client shows the client here; Work below can still move the time to a work item. -->
-    <div id="clientRow" hidden>
-      <label for="clientQ" class="field">Client</label>
-      <div id="clientChosen" class="chosen">
-        <div class="grow"><span id="clientTitle" class="t"></span></div>
-      </div>
-      <div id="clientPicker" hidden>
-        <input id="clientQ" type="search" placeholder="Search clients" autocomplete="off" aria-controls="clientResults">
-        <div id="clientHead" class="muted" style="margin-top:6px"></div>
-        <ul class="items" id="clientResults" aria-live="polite"></ul>
-      </div>
-    </div>
-    <label for="q" class="field">Work</label>
-    <div id="chosen" class="chosen" hidden>
-      <div class="grow"><span id="chosenTitle" class="t"></span><span id="chosenSub" class="s"></span></div>
-    </div>
-    <div id="picker">
-      <div id="combo" class="combo">
-        <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="workErr" aria-expanded="false">
-        <div id="drop" class="drop" hidden>
-          <div id="resultsHead" class="muted"></div>
-          <ul class="items" id="results" aria-live="polite"></ul>
-        </div>
-      </div>
-      <ul class="items" id="suggest" style="margin-top:6px"></ul>
-    </div>
+    <!-- Client shows only where the firm books time to clients as well as work items. A work item picked wins. -->
+    <div id="clientField" hidden></div>
+    <div id="workField"></div>
+    <ul class="items" id="suggest" style="margin-top:6px"></ul>
     <p id="workErr" class="err" hidden></p>
 
     <div class="pair">

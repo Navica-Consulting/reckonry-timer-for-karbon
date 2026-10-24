@@ -31,25 +31,10 @@
       </button>
     </div>
 
-    <!-- The running timer's details, editable. Missing required ones are outlined in red. -->
-    <label for="curQ" class="field">
-      <span id="curWorkLabel">Work or contact</span>
-    </label>
-    <div id="curChosen" class="chosen">
-      <div class="grow">
-        <button id="work" type="button" title="Open this work item in Karbon"></button>
-        <span id="client" class="s"></span>
-      </div>
-    </div>
-    <div id="curPicker" hidden>
-      <div id="curCombo" class="combo">
-        <input id="curQ" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="curResults" aria-required="true" aria-expanded="false">
-        <div id="curDrop" class="drop" hidden>
-          <div id="curResultsHead" class="muted"></div>
-          <ul class="items" id="curResults" aria-live="polite"></ul>
-        </div>
-      </div>
-    </div>
+    <!-- The running timer's details, editable. Missing required ones are outlined in red.
+         Client shows only where the firm books time to clients as well as work items. -->
+    <div id="curClientField" hidden></div>
+    <div id="curWorkField"></div>
     <div class="pair">
       <div>
         <label for="curRole" class="field">Role</label>
@@ -72,7 +57,7 @@
     <button id="signIn" type="button" class="btn primary">Sign in to Karbon</button>
   </section>
 
-  <!-- Start, shown only with no timer running: same field order as Karbon's own timer (Work, Role, Task type, Notes) -->
+  <!-- Start, shown only with no timer running: Client (where the firm allows it), Work, Role, Task type, Notes -->
   <section id="startBox" class="start" aria-labelledby="startHeading">
     <div class="row">
       <h2 id="startHeading" class="grow panel-title">Start timer</h2>
@@ -81,21 +66,10 @@
       </button>
     </div>
 
-    <label for="q" id="qLabel" class="field">Work <span class="req">(optional)</span></label>
-    <div id="chosen" class="chosen" hidden>
-      <div class="grow"><span id="chosenTitle" class="t"></span><span id="chosenSub" class="s"></span></div>
-    </div>
-    <div id="picker">
-      <div id="combo" class="combo">
-        <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="qHint" aria-expanded="false">
-        <div id="drop" class="drop" hidden>
-          <div id="resultsHead" class="muted"></div>
-          <ul class="items" id="results" aria-live="polite"></ul>
-        </div>
-      </div>
-      <p id="qHint" class="muted" style="margin:4px 0 0">Leave blank to choose it when you stop.</p>
-      <ul class="items" id="quickList"></ul>
-    </div>
+    <div id="clientField" hidden></div>
+    <div id="workField"></div>
+    <p id="qHint" class="muted" style="margin:4px 0 0">Leave blank to choose it when you stop.</p>
+    <ul class="items" id="quickList"></ul>
 
     <label for="role" class="field">Role</label>
     <select id="role"></select>

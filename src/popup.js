@@ -10,9 +10,7 @@ let here = null;         // the active tab, when it is a Karbon work item: { key
 let notesTimer = null;   // pending save of the notes field
 let timeCfg = null;      // the firm's time settings: { workOnly, notesRequired }
 let tick = null;
-let chosen = null;       // the work item or contact picked in the Work field
 let lists = null;        // role and task type lists: { roles, taskTypes }
-let changingWork = false; // the running timer's work is being changed in the card
 let signedOut = false;   // Karbon says this browser is signed out
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
@@ -28,15 +26,7 @@ function say(text) {
 }
 
 const workOnly = () => !!(timeCfg && timeCfg.workOnly);
-
-function itemRow(item, { lead, onStart }) {
-  const label = el('button', { type: 'button', class: 'item', onclick: () => onStart(item) },
-    el('span', { class: 't' }, lead ? el('span', { class: 'lead' }, `${lead} `) : null, item.title || 'Untitled',
-      TAGS[item.linkType] ? el('span', { class: 'tag' }, TAGS[item.linkType]) : null),
-    item.subtitle ? el('span', { class: 's' }, item.subtitle) : null);
-  label.setAttribute('aria-label', `${lead ? `${lead} ` : 'Choose '}${item.title || 'item'}${item.subtitle ? `, ${item.subtitle}` : ''}`);
-  return el('li', {}, label);
-}
+const isWorkItem = (linkType) => !linkType || linkType === 'WorkItem';
 
 // ---- Rendering the current timer ----
 function render(s) {
@@ -86,25 +76,22 @@ function setSignedOut(on) {
   if (signedOut === on) return;
   signedOut = on;
   render(current);
-  if (!on) { loadRecents(false); loadLookups(); }
+  if (!on) loadLookups();
 }
 
 // The running timer's work, role, and task type stay visible and editable.
 // Anything Karbon needs before it will save the entry is outlined in red while it's missing.
 function renderDetails(s) {
-  // A contact timer has no work item, so the contact's name is the main line.
-  const isWork = !s.linkType || s.linkType === 'WorkItem';
+  if (!cur.work) return; // fields not built yet
+  // A work item shows under Work, with its client under Client. A client timer shows only under Client.
   const blank = !s.work;
-  if (blank) changingWork = false;
-  $('curChosen').hidden = blank || changingWork;
-  $('curPicker').hidden = !blank && !changingWork;
-  if (!blank) {
-    $('work').textContent = isWork ? s.title || 'Open work item' : s.client || 'Open contact';
-    if (!isWork && TAGS[s.linkType]) $('work').append(' ', el('span', { class: 'tag' }, TAGS[s.linkType]));
-    $('work').title = isWork ? 'Open this work item in Karbon' : `Open this ${TAGS[s.linkType] || 'contact'} in Karbon`;
-  }
-  $('client').textContent = isWork ? s.client || '' : '';
-  setInvalid($('curQ'), blank);
+  const onWork = !blank && isWorkItem(s.linkType);
+  cur.work.show(onWork ? { key: s.work, title: s.title || 'Untitled work item' } : null);
+  cur.client.show(blank ? null : onWork ? { title: s.client } : { key: s.work, title: s.client || 'Client', linkType: s.linkType });
+  // Karbon needs one of the two. A client only counts where the firm allows time on clients.
+  const none = blank || (workOnly() && !onWork);
+  cur.work.invalid(none);
+  cur.client.invalid(blank && !workOnly());
 
   const lk = lists || {};
   fillCurrent($('curRole'), lk.roles || [], s.roleKey, 'role');
@@ -131,7 +118,8 @@ function renderQuick() {
   list.replaceChildren();
   const running = isActive(current) ? current.work : null;
   if (here && here.key !== running) {
-    list.append(itemRow({ key: here.key, linkType: 'WorkItem', title: here.title }, { lead: 'This work item:', onStart: choose }));
+    const it = { key: here.key, linkType: 'WorkItem', title: here.title };
+    list.append(el('li', {}, pickRow(it, () => start.work.pick(it), 'This work item:')));
   }
 }
 
@@ -173,7 +161,7 @@ async function toFinishForm({ note, then = null, thenTitle = null, missing }) {
 // ---- Stop, swap, and discard ----
 // Stop and Swap save the entry from the card. Required fields still empty bounce instead of opening a second form.
 // Focus stays on the button: focusing the Work field would open its recents over the red outline.
-const FIELD = { work: 'curQ', role: 'curRole', taskType: 'curTask', notes: 'curNotes' };
+const FIELD = { work: 'curWorkQ', role: 'curRole', taskType: 'curTask', notes: 'curNotes' };
 
 function missingHere() {
   const m = [];
@@ -187,7 +175,6 @@ function missingHere() {
 // The red outline and shake say what's missing, so there is no message.
 function bounce(missing) {
   say('');
-  if (missing.includes('work') && current.work) { changingWork = true; renderDetails(current); }
   for (const k of missing) {
     const f = $(FIELD[k]);
     setInvalid(f, true);
@@ -251,12 +238,6 @@ $('discard').addEventListener('click', async () => {
   $('go').focus();
 });
 
-$('work').addEventListener('click', async () => {
-  if (!current || !current.work) return;
-  await chrome.runtime.sendMessage({ type: 'openWork', tenant: current.tenant, work: current.work, linkType: current.linkType });
-  window.close();
-});
-
 // ---- Editing the running timer ----
 async function editCurrent(args) {
   say('');
@@ -269,32 +250,10 @@ async function editCurrent(args) {
 $('curRole').addEventListener('change', () => editCurrent({ roleKey: $('curRole').value || null }));
 $('curTask').addEventListener('change', () => editCurrent({ taskTypeKey: $('curTask').value || null }));
 
-async function setWork(item) {
-  const ok = await editCurrent({ workKey: item.key, linkType: item.linkType || 'WorkItem' });
-  if (!ok) return;
-  openDrop(BOX.cur, false);
-  changingWork = false;
-  $('curQ').value = '';
+// The timer is on its work item, or else its client. Clearing both leaves it blank.
+async function setEntity(item) {
+  return editCurrent(item ? { workKey: item.key, linkType: item.linkType || 'WorkItem' } : { workKey: null });
 }
-
-clickToChange($('curChosen'), 'Change work or contact', () => {
-  changingWork = true;
-  renderDetails(current);
-  $('curQ').focus();
-  loadRecents(false, BOX.cur);
-});
-
-// Escape backs out of changing a work item that is already set.
-$('curQ').addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || !current || !current.work) return;
-  e.preventDefault();
-  changingWork = false;
-  renderDetails(current);
-  $('curChosen').focus();
-});
-$('curQ').addEventListener('focus', () => {
-  if (!$('curQ').value.trim() && !$('curResults').children.length) loadRecents(false, BOX.cur);
-});
 
 // Notes save a moment after you stop typing, and when you leave the field.
 async function saveNotes() {
@@ -313,29 +272,49 @@ $('curNotes').addEventListener('input', () => {
 });
 $('curNotes').addEventListener('change', () => saveNotes());
 
-// ---- Work field: pick an item, then press play (Karbon's order) ----
-function choose(item) {
-  chosen = item;
-  $('chosenTitle').textContent = item.title || 'Untitled';
-  if (TAGS[item.linkType]) $('chosenTitle').append(' ', el('span', { class: 'tag' }, TAGS[item.linkType]));
-  $('chosenSub').textContent = item.subtitle || '';
-  $('chosen').hidden = false;
-  $('picker').hidden = true;
-  openDrop(BOX.start, false);
-  $('role').focus();
-}
+// ---- Client and Work fields ----
+// The start form's and the running timer's, built once the firm's settings are known.
+const start = {};
+const cur = {};
 
-function clearChoice() {
-  chosen = null;
-  $('chosen').hidden = true;
-  $('picker').hidden = false;
-  $('q').focus();
+// Client scopes Work to its own work, so switching or clearing it clears Work.
+// Work picked with no client fills in the work item's client.
+function pickedWork(fields, item) {
+  if (!workOnly() && !fields.client.item) fillClient(fields.client, item.client);
 }
-clickToChange($('chosen'), 'Change work or contact', clearChoice);
+const scopeOf = (fields) => () => (!workOnly() && fields.client.item ? fields.client.item.title : null);
+
+function buildFields() {
+  const both = !workOnly();
+  const opt = el('span', { class: 'req' }, '(optional)');
+  start.client = pickField($('clientField'), { id: 'client', label: ['Client ', opt.cloneNode(true)], kind: 'contact', onError: sayError,
+    onPick: () => { start.work.show(null, true); $('role').focus(); },
+    onClear: () => start.work.show(null, true) });
+  start.work = pickField($('workField'), { id: 'work', label: ['Work ', opt], kind: 'work', onError: sayError, describedBy: 'qHint',
+    scope: scopeOf(start), onPick: (it) => { pickedWork(start, it); $('role').focus(); } });
+  cur.client = pickField($('curClientField'), { id: 'curClient', label: 'Client', kind: 'contact', onError: sayError,
+    onPick: (it) => { cur.work.show(null, true); setEntity(it); },
+    onClear: () => { cur.work.show(null, true); setEntity(null); } });
+  cur.work = pickField($('curWorkField'), { id: 'curWork', label: 'Work', kind: 'work', onError: sayError, scope: scopeOf(cur),
+    onPick: (it) => setEntity(it),
+    onClear: async () => {
+      const c = workOnly() ? null : cur.client.item;
+      const k = await keyedClient(c);
+      if (c && !k) { refresh(); return say(`Couldn't find ${c.title} in Karbon. Search for the client instead.`); }
+      setEntity(k);
+    } });
+  $('clientField').hidden = !both;
+  $('curClientField').hidden = !both;
+  cur.work.q.setAttribute('aria-required', String(!both));
+}
 
 // Work is optional: with nothing chosen, the timer starts blank and the details are asked for at stop.
 async function startChosen() {
-  if (!isActive(current)) startNew(chosen);
+  if (isActive(current)) return;
+  const c = start.client.item;
+  const item = start.work.item || (workOnly() ? null : await keyedClient(c));
+  if (!item && c && !workOnly()) return say(`Couldn't find ${c.title} in Karbon. Search for the client instead.`);
+  startNew(item);
 }
 
 async function startArgs(item) {
@@ -359,10 +338,8 @@ async function startNew(item) {
     return toFinishForm({ note: stopNote, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
   }
   $('desc').value = '';
-  $('q').value = '';
-  chosen = null;
-  $('chosen').hidden = true;
-  $('picker').hidden = false;
+  start.client.show(null, true);
+  start.work.show(null, true);
   refresh();
 }
 
@@ -395,56 +372,6 @@ async function loadLookups() {
   };
   await chrome.storage.local.set({ lookups: lk });
   paint(lk);
-}
-
-// ---- Search and recents ----
-// Two result lists: the start panel's Work field, and the running timer's.
-const BOX = {
-  start: { q: 'q', head: 'resultsHead', list: 'results', combo: 'combo', drop: 'drop', pick: (it) => choose(it), seq: 0, debounce: null },
-  cur: { q: 'curQ', head: 'curResultsHead', list: 'curResults', combo: 'curCombo', drop: 'curDrop', pick: (it) => setWork(it), seq: 0, debounce: null },
-};
-
-function showResults(box, head, items) {
-  $(box.head).textContent = head;
-  $(box.list).replaceChildren(...items.map((it) => itemRow(it, { onStart: box.pick })));
-}
-
-async function loadRecents(force, box = BOX.start) {
-  const reach = await chrome.runtime.sendMessage({ type: 'canReach' });
-  if (!reach && !force) {
-    $(box.head).replaceChildren(el('button', { type: 'button', class: 'linklike', onclick: () => loadRecents(true, box) }, 'Show recent work items'));
-    $(box.list).replaceChildren();
-    return;
-  }
-  $(box.head).textContent = 'Loading recent work items.';
-  const r = await send('recents', { take: 6 });
-  if (!r || !r.ok) { $(box.head).textContent = ''; return sayError(r); }
-  showResults(box, r.result.length ? 'Recent work items' : 'No recent work items.', r.result);
-}
-
-async function runSearch(term, box) {
-  const mine = ++box.seq;
-  $(box.head).textContent = 'Searching.';
-  // One request at a time, so a closed Karbon is only opened once.
-  const w = await send('search', { term, kind: 'work', take: 6 });
-  if (mine !== box.seq) return;
-  if (!w || !w.ok) { $(box.head).textContent = ''; return sayError(w); }
-  // Work-only firms cannot book time to contacts, so contacts are left out of results.
-  const c = workOnly() ? null : await send('search', { term, kind: 'contact', take: 4 });
-  if (mine !== box.seq) return;
-  const items = [...w.result, ...((c && c.ok && c.result) || [])];
-  showResults(box, items.length ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'No matches.', items);
-}
-
-for (const box of Object.values(BOX)) {
-  bindDrop(box);
-  $(box.q).addEventListener('input', () => {
-    openDrop(box, true);
-    clearTimeout(box.debounce);
-    const term = $(box.q).value.trim();
-    if (term.length < 2) { box.seq++; box.debounce = setTimeout(() => loadRecents(false, box), 200); return; }
-    box.debounce = setTimeout(() => runSearch(term, box), 350);
-  });
 }
 
 // ---- Preferences ----
@@ -483,15 +410,10 @@ $('feedback').addEventListener('click', async () => { await openFeedback(); wind
   const m = tab && tab.url && tab.url.match(new RegExp(`^${KARBON.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}[^/]+/work/([A-Za-z0-9]+)`));
   if (m) here = { key: m[1], title: (tab.title || '').split(' | ')[0].replace(/ - [^-]+$/, '').trim() || 'This work item' };
   ({ timeCfg = null } = await chrome.storage.local.get('timeCfg'));
-  if (workOnly()) {
-    $('q').placeholder = 'Search work items';
-    $('curQ').placeholder = 'Search work items';
-    $('curWorkLabel').textContent = 'Work';
-  }
+  buildFields();
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
   if (signedOut) return;
-  loadRecents(false);
   loadLookups();
 })();

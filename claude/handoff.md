@@ -31,6 +31,7 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - Monetization model: not decided. Claude suggested launching free as a lead source for Navica, Reckonry, and Liminos, with a possible paid firm-admin tier later (waiting on: Max).
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it; Microsoft publisher verification would be needed first (waiting on: Max).
 - Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review. Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
+- Client and Work fields: 0.7.28 scopes Work to the chosen client by matching the client's name, since Karbon gives a work item's client by name only. It filters up to 25 results, so a common search term can miss some of that client's work, and a client group's work may not match. Capturing the call behind a client's Work tab in Karbon would make it exact. A client filled in from a work item gets its key by an exact name search (waiting on: a capture session).
 - Feedback form: Send feedback opens a Google Form, uncommitted in 0.7.19. To do before release: turn off "Restrict to users in Navica LLC" in the form's settings, fix the "Pease add more details" typo, test the button in Chrome, give `docs/privacy-policy.md` a new effective date and copy it to the Google Site, and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
 
 ## Decisions
@@ -42,6 +43,13 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-24, separate Client and Work fields (Claude Code)
+- The panel's timer card, the start form, and the finish form now share one field (`pickField` in `ui.js`) for Client and for Work. Work-only firms get Work only.
+- Clicking a chosen box searches again, and an x inside it clears it. The Change buttons and the work item's link to Karbon are gone.
+- Work with no client searches all work and fills Client. With a client set, Work lists only that client's work. Switching or clearing the client clears Work.
+- Work search results show only the client, without Karbon's "Assigned to" part.
+- 0.7.22 through 0.7.28. Max confirmed 0.7.28 works in Chrome. Committed on its own, apart from the error-log work that shares the working tree.
+
 ### 2026-10-24, feedback form (Claude Code)
 - Max chose a Google Form over a Karbon email draft. The draft plan is replaced in `artifacts/feedback-draft-plan.md`.
 - Send feedback opens the form with the version and settings prefilled in its Logs field (`entry.1196218190`). The settings page keeps "Email us instead," the old `mailto:` link.
