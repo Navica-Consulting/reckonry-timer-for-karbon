@@ -93,6 +93,7 @@
   const focused = () => document.visibilityState === 'visible' && document.hasFocus();
   const dismissed = new Set(); // items whose reminder you dismissed in this tab
   const SETTLE_MS = 600;       // let the page finish routing before checking the timer
+  const TOAST_SECONDS = 5;     // a cancel toast stays this long once the wait is over
 
   let lastKey = null;
   let timers = [];
@@ -140,12 +141,13 @@
     const seconds = isWork ? s.workStartSeconds : s.contactStartSeconds;
     const remindSeconds = isWork ? s.nudgeSeconds : s.contactNudgeSeconds;
     // Contacts only take over a running timer when contact auto-start is on.
-    if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, s.switchSeconds, blankOnly);
-    if (!running && canStart) return autoAct(item, s, false, seconds, blankOnly);
-    if (!running && remind && !dismissed.has(key)) {
-      timers.push(setTimeout(() => nudge(item, s), Math.max(0, remindSeconds * 1000 - SETTLE_MS)));
-    }
+    if (running && s.autoSwitch && (isWork || canStart)) return later(s.switchSeconds, () => autoAct(item, s, true, blankOnly));
+    if (!running && canStart) return later(seconds, () => autoAct(item, s, false, blankOnly));
+    if (!running && remind && !dismissed.has(key)) later(remindSeconds, () => nudge(item, s));
   }
+
+  // The settings count from when the page opened, which includes the settle delay.
+  const later = (seconds, fn) => timers.push(setTimeout(fn, Math.max(0, (Number(seconds) || 0) * 1000 - SETTLE_MS)));
 
   async function startArgs(item, extra) {
     const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
@@ -225,12 +227,17 @@
     if (st && (st.state === 'Stopped' || st.work)) removePrompt();
   }, 5000);
 
-  async function autoAct(item, s, switching, seconds, blankOnly = false) {
+  async function autoAct(item, s, switching, blankOnly = false) {
+    if (!here(item.key) || !focused()) return log('skipped after wait');
+    // The timer may have changed during the wait.
+    const state = await readState();
+    const running = state && state.state !== 'Stopped';
+    if (!state || state.work === item.key || running !== switching || (running && !state.work)) return log('timer changed during wait');
     const kind = KIND[item.linkType];
     const go = await showToast({
       text: blankOnly ? (switching ? 'Saving this timer and starting one with no work item' : 'Starting a timer with no work item')
         : switching ? `Switching timer to this ${kind}` : `Starting timer on this ${kind}`,
-      seconds: Math.max(1, Number(seconds) || 1), mode: 'countdown',
+      seconds: TOAST_SECONDS, mode: 'countdown',
     });
     if (!go || !here(item.key)) return log('cancelled');
     const extra = switching
@@ -263,6 +270,7 @@
 
   // ---- Accessible toast ----
   // countdown: acts unless cancelled. confirm: acts only if the button is pressed. info: message only.
+  // The bar drains over the toast's time and pauses while the pointer or focus is on it.
   let toastHost = null;
   let toastDone = null;
   function removeToast() {
@@ -283,15 +291,21 @@
       root.innerHTML = `
         <style>
           .t{position:fixed;right:20px;bottom:20px;z-index:2147483647;background:#1f2933;color:#fff;
-             font:14px/1.4 system-ui,sans-serif;padding:12px 14px;border-radius:8px;display:flex;gap:10px;
-             align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:400px}
+             font:14px/1.4 system-ui,sans-serif;padding:12px 14px 15px;border-radius:8px;display:flex;gap:10px;
+             align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:400px;overflow:hidden}
+          .bar{position:absolute;left:0;bottom:0;height:3px;width:100%;background:#7cb0ff;transform-origin:left;
+               animation:drain var(--d) linear forwards}
+          .t:hover .bar,.t:focus-within .bar{animation-play-state:paused}
+          @keyframes drain{to{transform:scaleX(0)}}
           button{font:inherit;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap}
           .go{background:#7cb0ff;color:#0b1c33;font-weight:600}
           .no{background:#fff;color:#1f2933}
           button:focus-visible{outline:3px solid #7cc4fa;outline-offset:2px}
         </style>
-        <div class="t" role="status" aria-live="polite"><span class="msg"></span>${buttons}</div>`;
+        <div class="t" role="status" aria-live="polite"><span class="msg"></span>${buttons}<span class="bar"></span></div>`;
       const msg = root.querySelector('.msg');
+      const bar = root.querySelector('.bar');
+      bar.style.setProperty('--d', `${seconds}s`);
       let left = seconds;
       const render = () => { msg.textContent = mode === 'countdown' ? `${text} in ${left}s.` : text; };
       render();
@@ -308,11 +322,13 @@
         resolve(val);
       };
       toastDone = finish;
+      // The bar's animation is the clock, so pausing it pauses the countdown too.
+      bar.addEventListener('animationend', () => finish(mode === 'countdown'));
       const tick = setInterval(() => {
-        left -= 1;
-        if (left <= 0) finish(mode === 'countdown');
-        else if (mode === 'countdown') render();
-      }, 1000);
+        const a = bar.getAnimations()[0];
+        const now = Math.max(1, Math.ceil(seconds - (a ? a.currentTime : 0) / 1000));
+        if (now !== left && mode === 'countdown') { left = now; render(); }
+      }, 200);
       root.querySelector('.no').addEventListener('click', () => finish(false));
       const go = root.querySelector('.go');
       if (go) go.addEventListener('click', () => finish(true));

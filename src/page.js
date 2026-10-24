@@ -227,9 +227,10 @@
   // Returns the new timer, or { needsCompletion, missing, state } when the running timer can't be saved yet.
   async function start({ workKey = null, linkType = 'WorkItem', roleKey, taskTypeKey, description, note, stopNote, interactive = false }) {
     workKey = workKey || null;
+    // Firms that book time to work items only can't link a timer to a contact, so it starts blank.
     if (workKey && linkType !== 'WorkItem') {
       const cfg = await timeSettings().catch(() => null);
-      if (cfg && cfg.workOnly) throw new Error('Your firm books time to work items only, so timers cannot start on a contact.');
+      if (cfg && cfg.workOnly) workKey = null;
     }
     const cur = await getState();
     if (cur.stopwatchState !== 'Stopped') {

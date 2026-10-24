@@ -221,11 +221,16 @@ async function finishTimer({ fill }) {
   return { ok: true, result: { ...r.result, started } };
 }
 
+// Throws the paused timer away, then runs any pending switch, same as a save would.
 async function discardTimer() {
+  const p = (await pendingFinish()) || {};
   const r = await toKarbon('discard', {});
-  if (r && r.ok) await chrome.storage.session.remove('pendingFinish');
+  if (!r || !r.ok) { await refreshBadge(); return r; }
+  await chrome.storage.session.remove('pendingFinish');
+  let started = null;
+  if (p.then) started = await toKarbon('start', { ...p.then, interactive: true });
   await refreshBadge();
-  return r;
+  return { ...r, result: { ...(r.result || {}), started } };
 }
 
 // ---- Messages ----

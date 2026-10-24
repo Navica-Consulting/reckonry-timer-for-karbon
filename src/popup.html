@@ -82,13 +82,13 @@
       <fieldset class="group">
         <legend><h3>Work</h3></legend>
         <label class="opt radio">
-          <span class="txt">Auto-start a timer<span class="sub">After a countdown you can cancel</span></span>
+          <span class="txt">Auto-start a timer<span class="sub">After a 5-second countdown you can cancel</span></span>
           <input type="radio" name="startMode" value="auto">
         </label>
         <div class="nest" data-when="modeAuto">
           <label class="opt">
-            <span class="txt">Start after</span>
-            <span class="num"><input type="number" name="workStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a work item"> sec</span>
+            <span class="txt">Count down after</span>
+            <span class="num"><input type="number" name="workStartSeconds" min="0" max="60" aria-label="Seconds on a work item before the countdown"> sec</span>
           </label>
         </div>
         <label class="opt radio">
@@ -111,13 +111,13 @@
         <legend><h3>Clients</h3></legend>
         <p id="contactsSub" class="sub-note">People, organizations, and client groups.</p>
         <label class="opt radio">
-          <span class="txt">Auto-start a timer<span class="sub">After a countdown you can cancel</span></span>
+          <span class="txt">Auto-start a timer<span class="sub">After a 5-second countdown you can cancel</span></span>
           <input type="radio" name="contactMode" value="auto">
         </label>
         <div class="nest" data-when="contactAuto">
           <label class="opt">
-            <span class="txt">Start after</span>
-            <span class="num"><input type="number" name="contactStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a contact"> sec</span>
+            <span class="txt">Count down after</span>
+            <span class="num"><input type="number" name="contactStartSeconds" min="0" max="60" aria-label="Seconds on a contact before the countdown"> sec</span>
           </label>
         </div>
         <label class="opt radio">
@@ -145,8 +145,8 @@
         </label>
         <div class="nest" data-when="autoSwitch">
           <label class="opt">
-            <span class="txt">Switch after</span>
-            <span class="num"><input type="number" name="switchSeconds" min="1" max="60" aria-label="Seconds before a running timer switches"> sec</span>
+            <span class="txt">Count down after</span>
+            <span class="num"><input type="number" name="switchSeconds" min="0" max="60" aria-label="Seconds on an item before the switch countdown"> sec</span>
           </label>
         </div>
         <p class="sub-note">A timer with no work item never switches on its own. A pop-up asks you to finish it first.</p>

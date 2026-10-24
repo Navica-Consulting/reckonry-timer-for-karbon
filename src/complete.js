@@ -187,8 +187,13 @@ $('discard').addEventListener('click', async () => {
   }
   const r = await chrome.runtime.sendMessage({ type: 'discardTimer' });
   if (!r || !r.ok) return say((r && r.error) || 'Could not discard the timer.');
-  say('Timer discarded.');
-  done(900);
+  const st = r.result && r.result.started;
+  if (st && !st.ok) {
+    say(`Timer discarded. The new timer did not start: ${st.error || 'unknown error'}`);
+    return done(4000);
+  }
+  say(st ? `Timer discarded. Switched${pending && pending.thenTitle ? ` to ${pending.thenTitle}` : ''}.` : 'Timer discarded.');
+  done(st ? 1400 : 900);
 });
 
 document.addEventListener('keydown', (e) => {
