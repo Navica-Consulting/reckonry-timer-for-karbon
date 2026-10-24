@@ -1,3 +1,4 @@
+ktWatchErrors('panel');
 const KARBON = KT_ORIGIN;
 const ICON = {
   pause: 'M9 6v12M15 6v12',

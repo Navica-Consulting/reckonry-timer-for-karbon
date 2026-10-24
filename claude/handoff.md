@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.16 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.16 haven't run as a loaded extension yet: the settings page, editable timer card, and switch button (0.7.14); one form at a time and editable notes on the card (0.7.15); and the red discard confirmation (0.7.16). Commit `310c9e3` is labeled 0.7.15 but already carries the 0.7.16 manifest. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. 0.7.30 is on `origin/main` and is the release candidate. It carries everything through the separate Client and Work fields (0.7.28), the GitHub Pages policy move (0.7.29), and the error log (0.7.30). Max tested it locally. Version 0.6.1 is in Chrome Web Store review. A scheduled task tags `v0.7.30` and submits it once 0.6.1 clears. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
 
 ## Next step
-Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start. With the timer running, the panel should show only the timer card. In the card, set its work item, role, task type, and notes; each should save, or say plainly that Karbon didn't keep it. Press Swap with a field empty (it should bounce), then with all filled (it should save and start a blank timer). Then discard it: the first press should turn the button red, and the second should discard. Then finish.
+Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7.30) to report that 0.6.1 cleared and 0.7.30 was submitted. Check the tag's Release and Privacy page runs under Actions. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -15,12 +15,12 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 
 ## Open threads
 - Signed out of Karbon: 0.7.19 hides the timer when Karbon is signed out and offers a Sign in button that opens Karbon's sign-in page. 0.7.21 removed the page warning and the automatic opens (Max). It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured. Tested only with stubbed Chrome APIs (waiting on: a live sign-out test).
-- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, moves the v0.7.4 tag to `main` (same source; `main` has the workflow) and pushes it to submit 0.7.4. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
-- Privacy policy: the hosted policy (effective 2026-10-23) predates the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, and Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md`; the policy source is `docs/privacy-policy.md` (waiting on: Max).
+- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, tags the 0.7.30 commit as `v0.7.30` and pushes the tag, which submits 0.7.30 and republishes the policy. It no longer sends 0.7.4. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
+- Privacy policy: hosted on GitHub Pages at https://timer.reckonry.ai/privacy since 0.7.29, published from `docs/privacy-policy.md` on every version tag. The store listing points there. Effective 2026-10-24, with the feedback form and error log. It still doesn't cover the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, or Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md` (waiting on: Max).
 - Tab-free API calls: 0.7.18 runs every command from the background worker through `src/karbon.js`, shared with `page.js`. A Karbon tab is used only when Karbon can't be reached directly, and then an action reloads the tab or opens one. Max confirmed on 2026-10-24 that play works with Karbon closed and the Connection line reports tab-free timer changes. Search, recents, pause, stop, and the lock and day-end paths haven't been tried live without a tab (waiting on: Max's use).
 - Settings and help page: built on 2026-10-23 from `artifacts/settings-page-plan.md` and committed in 0.7.14. The help copy and FAQ answers are Claude's drafts, and the version is now 0.7.14 after parallel sessions; the plan suggested 0.8.0 (waiting on: Max's review).
 - Toolbar icon color: 0.7.5 lets the person pick a dark or light toolbar icon, in setup step 1 and in Preferences. No theme setting; pages keep following the system. 0.7.6 gives the manifest icons a white face and a thin white outline so they show on a dark extensions page. Details in `artifacts/theme-plan.md` (waiting on: Max's review).
-- Work and Clients preferences: 0.7.7 gives contacts their own choice of Auto-start, Remind me, or Do nothing, with new settings `remindContacts` and `contactNudgeSeconds`. Max checked it in Chrome on 2026-10-23. Not tagged, so the scheduled 0.7.4 task isn't affected (waiting on: nothing).
+- Work and Clients preferences: 0.7.7 gives contacts their own choice of Auto-start, Remind me, or Do nothing, with new settings `remindContacts` and `contactNudgeSeconds`. Max checked it in Chrome on 2026-10-23 (waiting on: nothing).
 - Multiple tenants: the bootstrap cookie names the user's default tenant. A Karbon tab's URL still wins for that tab. Not tested with a user who works in several tenants (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
 - Required "None" values: the finish form treats a role or task type named "None" as empty when the firm requires one. Not tested on a firm with `isActorRequired` or `isTaskTypeRequired` on (waiting on: a firm with those settings).
@@ -32,7 +32,8 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it; Microsoft publisher verification would be needed first (waiting on: Max).
 - Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review. Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
 - Client and Work fields: 0.7.28 scopes Work to the chosen client by matching the client's name, since Karbon gives a work item's client by name only. It filters up to 25 results, so a common search term can miss some of that client's work, and a client group's work may not match. Capturing the call behind a client's Work tab in Karbon would make it exact. A client filled in from a work item gets its key by an exact name search (waiting on: a capture session).
-- Feedback form: Send feedback opens a Google Form, uncommitted in 0.7.19. To do before release: turn off "Restrict to users in Navica LLC" in the form's settings, fix the "Pease add more details" typo, test the button in Chrome, give `docs/privacy-policy.md` a new effective date (the tag publishes it to timer.reckonry.ai), and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
+- Feedback form: Send feedback opens a Google Form, committed in 0.7.30 and tested by Max locally. Confirm in the form's own settings that "Restrict to users in Navica LLC" is off and the "Pease add more details" typo is fixed, and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
+- Error log and stale content scripts: 0.7.26 keeps the last 15 extension errors in `storage.local` (`errorLog`, in `src/errors.js`) and adds them to the feedback form's Logs field, the email draft, and Copy details. `content.js` now stops quietly after the extension reloads, instead of throwing "Extension context invalidated". Committed as 0.7.30 together with the feedback-form and finish-form changes that shared the working tree. Max tested it locally (waiting on: nothing).
 
 ## Decisions
 - Timer behavior and Preferences decisions are in `context/timer-behavior.md`.
@@ -41,8 +42,25 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - 2026-10-23: Remove "Start your first timer" from setup entirely (Max).
 - 2026-10-23: Keep one source (`src/`) and generate both unpacked builds from it (Max).
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
+- 2026-10-24: Host the privacy policy on GitHub Pages at timer.reckonry.ai/privacy, republished on each version tag. The old Google Site links to it for older versions (Max).
+- 2026-10-24: Skip 0.7.4. The first update after 0.6.1 is 0.7.30 (Max).
 
 ## Session log
+### 2026-10-24, privacy policy on GitHub Pages and 0.7.30 (Claude Code)
+- Max asked to host the policy on GitHub Pages with the domain `timer.reckonry.ai/privacy`. Pages is on, public, with the domain verified and HTTPS enforced. Max set the Cloudflare DNS, verified the domain, and changed the store URL.
+- New `.github/workflows/privacy-page.yml` and `scripts/privacy-page.sh`: on each `v*` tag, or by hand, they render `docs/privacy-policy.md` with GitHub's Markdown API and deploy it. The `github-pages` environment allows `main` and `v*` tags. A manual run published it and the page checked out.
+- The panel and settings page link to the new address (0.7.29). Max is adding a link on the old Google Site.
+- Committed the main checkout's error-log, feedback-form, and finish-form work on top as 0.7.30, gave the policy an effective date of 2026-10-24, and pointed the scheduled task at `v0.7.30`. Pushed to `origin/main`, not tagged.
+- The main checkout still has those edits uncommitted on an older local `main`. Its working tree matches 0.7.30 for those files, so discard them there and pull.
+
+### 2026-10-24, error log in feedback and stale content scripts (Claude Code)
+- Max asked for the feedback form's Logs field to show errors the extension records, and reported "Extension context invalidated" at `content.js:24` on a Karbon page.
+- New `src/errors.js`, loaded by the background, content script, panel, finish form, and settings page. It records failed Karbon calls once, in `toKarbon` (signed out is not counted), plus uncaught errors in extension pages and the service worker, and failed starts on Karbon pages. Karbon's own page errors are not watched. Repeats show once with a count. Messages are cut to 160 characters, with links and record keys replaced. Times are in UTC.
+- `currentDetails()` in `src/prefs.js` adds the errors, so Send feedback, Email us instead, and Copy details for support all include them. The settings page's Support copy now says so.
+- `content.js` checks `chrome.runtime.id` before using Chrome's APIs. Once it's gone, the script removes its message listener, clears its loops, and removes its cards.
+- Privacy review: `errorLog` added to the inventory with a review note in `docs/PRIVACY.md`. The Feedback section of `docs/privacy-policy.md` now mentions recent errors.
+- Built as 0.7.26. Not committed, and not loaded in Chrome. To test: reload `unpacked/production`, make a call fail, and check the Logs field. Then reload the extension with a Karbon tab open and check that tab's console.
+
 ### 2026-10-24, separate Client and Work fields (Claude Code)
 - The panel's timer card, the start form, and the finish form now share one field (`pickField` in `ui.js`) for Client and for Work. Work-only firms get Work only.
 - Clicking a chosen box searches again, and an x inside it clears it. The Change buttons and the work item's link to Karbon are gone.

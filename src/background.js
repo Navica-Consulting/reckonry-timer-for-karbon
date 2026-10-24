@@ -1,6 +1,7 @@
 // Service worker: badge, settings, lock and idle pause, sleep gaps, day-end split, long-timer alert,
 // shortcuts, and running commands against Karbon's API (through a Karbon tab only when a direct call fails).
-importScripts('config.js', 'defaults.js', 'notes.js', 'karbon.js');
+importScripts('config.js', 'defaults.js', 'notes.js', 'errors.js', 'karbon.js');
+ktWatchErrors('background');
 
 const KARBON = KT_ORIGIN;
 const HEARTBEAT_MIN = 1;
@@ -170,7 +171,14 @@ const WRITES = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'a
 
 // UNREACHABLE means neither Karbon's API nor a Karbon tab answered a read.
 // SIGNED_OUT means Karbon says this browser is signed out. No tab is opened for it.
+// Failures are kept for the feedback form. Signed out is a state, not an error.
 async function toKarbon(cmd, args) {
+  const r = await toKarbonOnce(cmd, args);
+  if (!r.ok && r.code !== 'SIGNED_OUT') ktRecordError(cmd, r.error);
+  return r;
+}
+
+async function toKarbonOnce(cmd, args) {
   const before = direct.writes();
   try {
     const result = await direct.run(cmd, args);

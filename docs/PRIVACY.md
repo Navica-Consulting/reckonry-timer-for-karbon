@@ -48,9 +48,10 @@ or taken down:
 | Settings, including the toolbar icon color (0.7.5), contact reminders (0.7.7), and contact auto-switch (0.7.11) | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
 | Notes on time entries | Extension | Karbon time entry | Sent to Karbon only |
-| Feedback form (version, on/off settings prefilled; optional email typed by the user) | User clicks Send feedback | Not stored by the extension; Google Forms and its Sheet | Only if the user submits it |
-| Feedback email (version, on/off settings) | User clicks Email us instead on the settings page | Not stored | Only if the user sends it |
+| Feedback form (version, on/off settings, recent errors prefilled; optional email typed by the user) | User clicks Send feedback | Not stored by the extension; Google Forms and its Sheet | Only if the user submits it |
+| Feedback email (version, on/off settings, recent errors) | User clicks Email us instead on the settings page | Not stored | Only if the user sends it |
 | Diagnostic info (cookie lookup notes, connection check, whether timer changes work without a Karbon tab) | Extension | `storage.local` | No |
+| Recent errors (last 15 of the extension's own error messages, with time and where; links and record keys removed) | Extension | `storage.local` (`errorLog`) | Only inside feedback the user submits or sends |
 
 Network destinations: `app2.karbonhq.com` and Karbon's regional API hosts (`*.karbonhq.com`).
 The extension makes no other calls. Send feedback opens a Google Form link (`docs.google.com`)
@@ -97,24 +98,26 @@ at `timer.reckonry.ai/privacy`. Only the link in the panel and the settings page
 is plain HTML with no scripts, cookies, or analytics. No new permissions, host access, storage
 keys, or network calls. No inventory change. Store listing: change the privacy policy URL by hand.
 
+Error log review (2026-10-24, 0.7.26): one new `storage.local` key, `errorLog`, keeps the last 15
+errors the extension raised itself: failed timer, search, and list calls, and uncaught errors in
+the panel, finish form, settings page, and service worker. Each entry has the time, where it
+happened (a command or page name), and the message, cut to 160 characters with links and record
+keys replaced. The messages are the extension's own text, so they hold no client or work names.
+Errors from Karbon's page are not watched. The log is added to the feedback form's details field,
+the email draft, and Copy details for support, where the user can read, edit, or clear it before
+sending. No new permissions, host access, or network calls. The policy's Feedback section now says
+recent errors are included.
+
 ## Hosting setup (done 2026-10-24)
 
 GitHub Pages is on for this repository, public, built by Actions, with the custom domain
-`timer.reckonry.ai`. The `github-pages` environment allows deploys from `main` and from `v*`
-tags. What is left is outside GitHub:
-
-1. In Cloudflare DNS for `reckonry.ai`, set `timer` to a CNAME for `navica-consulting.github.io`,
-   DNS only (grey cloud), so GitHub can issue the HTTPS certificate.
-2. Verify the domain for the org (GitHub org settings, Pages, Add a domain). It gives a TXT record
-   to add in Cloudflare and stops other accounts from claiming the subdomain.
-3. Once the certificate is ready, turn on Enforce HTTPS in the repository's Pages settings.
-4. Run the Privacy page workflow by hand once, check https://timer.reckonry.ai/privacy, then
-   change the URL in the store's Privacy practices tab.
-5. Add a link to the new address on the old Google Site.
+`timer.reckonry.ai` (verified for the org, HTTPS enforced). Cloudflare DNS has `timer` as a
+DNS-only CNAME for `navica-consulting.github.io`. The `github-pages` environment allows deploys
+from `main` and from `v*` tags. The store listing's privacy policy URL points to the new address.
 
 ## Open items
 
-Changes since the policy's October 23, 2026 effective date that it may not cover yet:
+Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover yet:
 
 - 0.7.2 added the `cookies` permission and reads Karbon's `bootstrap-cookie-*` to learn the
   account without a Karbon tab. The policy says identifiers are "learned from the Karbon web app";
@@ -133,3 +136,4 @@ Changes since the policy's October 23, 2026 effective date that it may not cover
 | Effective date | Extension version | Change |
 |---|---|---|
 | 2026-10-23 | 0.7.1 | First published policy. |
+| 2026-10-24 | 0.7.30 | Feedback opens a Google Form with recent errors. Moved to timer.reckonry.ai/privacy. |

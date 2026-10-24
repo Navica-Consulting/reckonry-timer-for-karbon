@@ -1,6 +1,7 @@
 // Finish form: collects what a timer needs before Karbon will save it (a work item or contact, plus a role,
 // task type, or note when the firm requires them). Opens in the toolbar panel (mode=popup), which the
 // background also opens after an automatic switch; a small window (mode=window) is the fallback.
+ktWatchErrors('finish form');
 const MODE = new URLSearchParams(location.search).get('mode') === 'window' ? 'window' : 'popup';
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 

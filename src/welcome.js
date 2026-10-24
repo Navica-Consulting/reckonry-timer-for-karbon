@@ -1,5 +1,6 @@
 // The settings and help page: live setup checklist, every setting with its default, and support details.
 // Opened on install, from the stopwatch, and from Chrome's Options menu. Needs defaults.js, prefs.js, and ui.js.
+ktWatchErrors('settings page');
 let lastCheck = 0;
 let setupOpened = false;   // the person chose "Show steps"
 let firstCheck = true;
@@ -198,9 +199,8 @@ $('shortcuts').addEventListener('click', () => chrome.tabs.create({ url: 'chrome
 $('feedback').addEventListener('click', openFeedback);
 $('emailFeedback').addEventListener('click', emailFeedback);
 $('copyDetails').addEventListener('click', async () => {
-  const s = await chrome.storage.sync.get(DEFAULTS);
   try {
-    await navigator.clipboard.writeText(supportDetails(s, workOnly));
+    await navigator.clipboard.writeText(await currentDetails());
     saved('Copied. Paste it into your message.');
   } catch {
     saved('Could not copy. Use Send feedback instead.');

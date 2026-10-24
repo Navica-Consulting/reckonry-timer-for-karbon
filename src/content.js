@@ -4,6 +4,17 @@
   const pending = new Map();
   let seq = 0;
 
+  // A reload or update of the extension leaves this script running in open tabs, cut off from Chrome's APIs,
+  // which then throw "Extension context invalidated". Once that happens it stops and clears its cards.
+  const loops = [];
+  const alive = () => !!(chrome.runtime && chrome.runtime.id);
+  function retire() {
+    window.removeEventListener('message', onPageMessage);
+    loops.forEach(clearInterval);
+    removeToast();
+    removePrompt();
+  }
+
   function pageCall(cmd, args) {
     return new Promise((resolve, reject) => {
       const id = `kt${Date.now()}_${++seq}`;
@@ -16,10 +27,11 @@
     });
   }
 
-  window.addEventListener('message', (ev) => {
+  function onPageMessage(ev) {
     if (ev.source !== window || ev.origin !== location.origin) return;
     const m = ev.data;
     if (!m || m.src !== 'kt-page') return;
+    if (!alive()) return retire();
     if (m.event === 'state') {
       chrome.runtime.sendMessage({ type: 'state', state: m.state }).catch(() => {});
       return;
@@ -33,7 +45,8 @@
     clearTimeout(p.timer);
     pending.delete(m.id);
     m.ok ? p.resolve(m.result) : p.reject(Object.assign(new Error(m.error), { signedOut: !!m.signedOut }));
-  });
+  }
+  window.addEventListener('message', onPageMessage);
 
   // Commands from background.js or the popup, routed to this tab.
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -142,7 +155,8 @@
   let timers = [];
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
-  setInterval(() => {
+  loops.push(setInterval(() => {
+    if (!alive()) return retire();
     const item = itemFromPath();
     const key = item ? item.key : null;
     if (key === lastKey) return;
@@ -153,7 +167,7 @@
     chrome.storage.sync.get(DEFAULTS).then((s) => {
       timers.push(setTimeout(() => onOpen(item, s), SETTLE_MS));
     });
-  }, 500);
+  }, 500));
 
   async function readState() {
     try { return await pageCall('getState'); } catch (e) { log('could not read timer:', e.message); return null; }
@@ -230,6 +244,7 @@
       const root = promptHost._root;
       root.querySelector('.no').addEventListener('click', () => { log('finish prompt: keep running'); removePrompt(); });
       root.querySelector('.go').addEventListener('click', async () => {
+        if (!alive()) return retire();
         const it = promptItem;
         const cfg = await chrome.storage.sync.get(DEFAULTS);
         removePrompt();
@@ -252,11 +267,11 @@
   }
 
   // Clear the prompt if the timer gets a work item or stops elsewhere.
-  setInterval(async () => {
+  loops.push(setInterval(async () => {
     if (!promptHost) return;
     const st = await readState();
     if (st && (st.state === 'Stopped' || st.work)) removePrompt();
-  }, 5000);
+  }, 5000));
 
   async function autoAct(item, s, switching, blankOnly = false) {
     if (!here(item.key) || !focused()) return log('skipped after wait');
@@ -282,6 +297,7 @@
         await chrome.runtime.sendMessage({ type: 'promptFinish', ui: 'window', reason: 'switch', note: stopNote, then, thenTitle: pageTitle(), missing: r.missing });
       }
     } catch (e) {
+      ktRecordError('page start', e.message);
       showToast({ text: e.message, seconds: 8, mode: 'info', pill: { text: 'Not started', tone: 'bad' } });
     }
   }
@@ -295,6 +311,7 @@
     try {
       await pageCall('start', await startArgs(item, { note: KTNotes.note('nudgeStart', s.noteLevel) }));
     } catch (e) {
+      ktRecordError('page start', e.message);
       showToast({ text: e.message, seconds: 8, mode: 'info', pill: { text: 'Not started', tone: 'bad' } });
     }
   }

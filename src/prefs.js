@@ -87,7 +87,7 @@ async function bindPrefs(form, onChange = () => {}) {
   return s;
 }
 
-// Feedback: a Google Form with the version and settings prefilled, never client or work data.
+// Feedback: a Google Form with the version, settings, and recent errors prefilled, never client or work data.
 // The email stays for people who'd rather write.
 const FEEDBACK_FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdSTWLnWUb8Pyfk3cuXpKfL9JGxfZ6ciFbuBzF_108db4y7LA/viewform';
 const FEEDBACK_DETAILS_ENTRY = 'entry.1196218190'; // The form's "Extension details" field.
@@ -111,7 +111,7 @@ function supportDetails(s, workOnly) {
 async function currentDetails() {
   const s = await chrome.storage.sync.get(DEFAULTS);
   const { timeCfg } = await chrome.storage.local.get('timeCfg');
-  return supportDetails(s, !!(timeCfg && timeCfg.workOnly));
+  return [supportDetails(s, !!(timeCfg && timeCfg.workOnly)), '', ...(await ktErrorLines())].join('\n');
 }
 
 async function openFeedback() {
