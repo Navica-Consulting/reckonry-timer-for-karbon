@@ -2,6 +2,7 @@
 /dist/
 /unpacked/production/
 /unpacked/stage/
+/_site/
 *.zip
 *.crx
 *.pem

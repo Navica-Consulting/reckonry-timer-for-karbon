@@ -1,0 +1,41 @@
+# On a version tag (v0.7.5 and so on): publish docs/privacy-policy.md to GitHub Pages at
+# https://timer.reckonry.ai/privacy, so the hosted policy always matches the release.
+# Run it by hand (Actions, Privacy page, Run workflow) to publish a policy fix between releases.
+# Setup steps are in docs/PRIVACY.md.
+name: Privacy page
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write      # deploy to GitHub Pages
+  id-token: write   # Pages checks the deploy came from this workflow
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}privacy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render the policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/privacy-page.sh _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4

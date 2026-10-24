@@ -1,8 +1,9 @@
 # Privacy policy tracking
 
-The public policy lives at
-https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home
-and is linked from `src/popup.html` and `src/welcome.html`. The Chrome Web Store listing's
+The public policy lives at https://timer.reckonry.ai/privacy and is linked from
+`src/popup.html` and `src/welcome.html`. Versions before 0.7.29 link to the old Google Site,
+https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home, so keep that
+page up with a link to the new address. The Chrome Web Store listing's
 Privacy practices tab must point to the same URL and agree with it.
 
 Three things must say the same thing, and drift between them is what gets an extension rejected
@@ -16,7 +17,9 @@ or taken down:
 ## Process
 
 - `docs/privacy-policy.md` holds the current policy text, so every change is a reviewed diff.
-  Edit it there first, then copy it to the Google Site.
+  The Privacy page workflow (`.github/workflows/privacy-page.yml`) renders it with
+  `scripts/privacy-page.sh` and publishes it to GitHub Pages on every version tag. To publish a
+  policy fix between releases, run that workflow by hand from Actions.
 - Bump the effective date in the policy on every substantive change, and add a line to the
   change log below.
 - A pull request or commit that touches any of the triggers below must update this file's
@@ -88,6 +91,26 @@ settings page as "Email us instead." No new permissions, host access, or storage
 Feedback section is updated in `docs/privacy-policy.md`, which needs a new effective date and a
 copy to the Google Site. Store Privacy tab: the extension itself still collects no personal data,
 so the data-use answers should not change; confirm before submitting.
+
+Policy hosting move (2026-10-24, 0.7.29): the policy moves from the Google Site to GitHub Pages
+at `timer.reckonry.ai/privacy`. Only the link in the panel and the settings page changes. The page
+is plain HTML with no scripts, cookies, or analytics. No new permissions, host access, storage
+keys, or network calls. No inventory change. Store listing: change the privacy policy URL by hand.
+
+## Hosting setup (done 2026-10-24)
+
+GitHub Pages is on for this repository, public, built by Actions, with the custom domain
+`timer.reckonry.ai`. The `github-pages` environment allows deploys from `main` and from `v*`
+tags. What is left is outside GitHub:
+
+1. In Cloudflare DNS for `reckonry.ai`, set `timer` to a CNAME for `navica-consulting.github.io`,
+   DNS only (grey cloud), so GitHub can issue the HTTPS certificate.
+2. Verify the domain for the org (GitHub org settings, Pages, Add a domain). It gives a TXT record
+   to add in Cloudflare and stops other accounts from claiming the subdomain.
+3. Once the certificate is ready, turn on Enforce HTTPS in the repository's Pages settings.
+4. Run the Privacy page workflow by hand once, check https://timer.reckonry.ai/privacy, then
+   change the URL in the store's Privacy practices tab.
+5. Add a link to the new address on the old Google Site.
 
 ## Open items
 

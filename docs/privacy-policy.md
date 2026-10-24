@@ -1,5 +1,5 @@
-<!-- Source of truth for the hosted policy. Edit here, then copy to:
-     https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home
+<!-- Source of truth for the hosted policy at https://timer.reckonry.ai/privacy.
+     The Privacy page workflow publishes it on every version tag.
      See docs/PRIVACY.md for when and how to update it. -->
 
 # Privacy Policy for Reckonry Timer for Karbon

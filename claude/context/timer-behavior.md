@@ -50,6 +50,7 @@ Settled design decisions for how the extension controls the Karbon timer.
 - 2026-10-23: Once the extension is pinned and connected, the setup steps fold into a one-line "You're set up" note, so returning visitors land on settings (Claude; confirm).
 - 2026-10-23: `DEFAULTS` lives in `src/defaults.js`, and the form logic in `src/prefs.js`, shared by the panel and the page (Claude).
 - 2026-10-23: The privacy policy is linked from the Preferences footer and the setup guide: https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home (Max).
+- 2026-10-24: The policy moves to GitHub Pages at https://timer.reckonry.ai/privacy, published on each version tag (Max).
 
 ## Pausing and away time
 - 2026-10-22: Pause on screen lock. On wake after sleep, flag the away time in the time entry note rather than backdating (Max).

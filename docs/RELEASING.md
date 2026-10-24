@@ -7,8 +7,8 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
 1. Bump `version` in `src/manifest.json`. The store rejects an upload with an unchanged version.
 2. Run `./build.sh`, then Reload both unpacked builds and test against stage and production.
 3. If permissions, host access, storage, or network calls changed, do the review in
-   [PRIVACY.md](PRIVACY.md): update the data inventory, `docs/privacy-policy.md`, the hosted
-   policy, and the store's Privacy practices tab.
+   [PRIVACY.md](PRIVACY.md): update the data inventory, `docs/privacy-policy.md`, and the store's
+   Privacy practices tab. The hosted policy publishes itself from the tag.
 4. Commit, tag, and push:
 
    ```bash
@@ -17,7 +17,9 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
 
 5. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches the
    manifest, builds, attaches the zips to a GitHub release, uploads the store zip, and submits it
-   for review. It goes live after approval. Check the run under Actions on GitHub.
+   for review. It goes live after approval. The Privacy page workflow publishes
+   `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy from the same tag. Check both runs
+   under Actions on GitHub.
 
 A new version can't be submitted while another is still in review, so wait for approval before
 tagging. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub
