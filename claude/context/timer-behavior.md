@@ -34,7 +34,7 @@ Settled design decisions for how the extension controls the Karbon timer.
 - 2026-10-23: The default panel should open without a scroll bar when possible (Max).
 - 2026-10-23: New defaults (Max, v0.7.11): work items auto-start after 1 second; contacts get a reminder after 60 seconds, and wait 5 seconds when set to auto-start; auto-switch is on after 1 second; resume after a lock or idle pause is on; the badge shows everywhere; the toolbar icon suits dark themes. The cancel countdown stays a fixed 5 seconds.
 - 2026-10-23: Auto-switch is set separately for Work and Clients, as two switches. Work is on by default, Clients off. Both share one countdown (Max asked for the split; Clients default by Claude, confirm).
-- 2026-10-23: Upgrades from before 0.7.11 keep the old defaults for anyone who never changed them, so only new installs see the new ones. Contact auto-switch starts on only where auto-switch and contact auto-start were both on, as before (Claude, confirm).
+- 2026-10-23: The new defaults apply to existing users too, for any setting they never changed (Max). Upgrades turn contact auto-switch on only where someone had turned on both auto-switch and contact auto-start, as before (Claude).
 - 2026-10-23: The privacy policy is linked from the Preferences footer and the setup guide: https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home (Max).
 
 ## Pausing and away time

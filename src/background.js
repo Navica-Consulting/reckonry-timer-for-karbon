@@ -531,15 +531,10 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
     const work = carry.autoStartWork ?? c.autoStartWork;
     if (c.autoStartContacts && !work) carry.autoStartContacts = false;
   }
-  // 0.7.11: new defaults are for new installs. Keep the old ones for anyone who never changed them.
-  // Contacts used to switch only when auto-switch and contact auto-start were both on.
+  // 0.7.11: contacts used to switch only when auto-switch and contact auto-start were both turned on.
   if (reason === 'update' && before(previousVersion, '0.7.11')) {
-    const OLD = { workStartSeconds: 2, autoStartContacts: false, remindContacts: false, contactStartSeconds: 8,
-      autoSwitch: false, switchSeconds: 2, autoResume: false, badgeWhere: 'away', toolbarTheme: 'light' };
-    const have = await chrome.storage.sync.get(Object.keys(OLD));
-    for (const k of Object.keys(OLD)) if (have[k] === undefined && carry[k] === undefined) carry[k] = OLD[k];
-    const was = { ...OLD, ...have, ...carry };
-    carry.autoSwitchContacts = !!(was.autoSwitch && was.autoStartContacts);
+    const was = await chrome.storage.sync.get(['autoSwitch', 'autoStartContacts']);
+    if (was.autoSwitch === true && (carry.autoStartContacts ?? was.autoStartContacts) === true) carry.autoSwitchContacts = true;
   }
   if (Object.keys(carry).length) await chrome.storage.sync.set(carry);
   // 0.7.1: the default work item was removed.

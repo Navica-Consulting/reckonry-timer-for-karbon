@@ -43,7 +43,7 @@ Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshoot
 ### 2026-10-23, new defaults and per-kind auto-switch (Claude Code)
 - Max chose new defaults: work auto-start after 1 second, contact reminders on, contact auto-start wait 5 seconds, auto-switch on after 1 second, resume after a pause on, badge everywhere, toolbar icon for dark themes.
 - Auto-switch is now two switches, Work and Clients, with new setting `autoSwitchContacts` (off by default).
-- Upgrades from before 0.7.11 keep the old defaults for anyone who never changed them. Bumped to 0.7.11 and rebuilt. Checked the Preferences panel with a stubbed browser page, not yet in Chrome.
+- The new defaults reach existing users too, for any setting they never changed (Max). Bumped to 0.7.11 and rebuilt. Checked the Preferences panel with a stubbed browser page, not yet in Chrome.
 
 ### 2026-10-23, Work and Clients preferences (Claude Code)
 - Split the no-timer preference into two groups, "Work" and "Clients," each with Auto-start, Remind me, or Do nothing and its own seconds.
