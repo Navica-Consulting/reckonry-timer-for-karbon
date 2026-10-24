@@ -1,6 +1,6 @@
 // Service worker: badge, settings, lock and idle pause, sleep gaps, day-end split, long-timer alert,
-// shortcuts, and routing commands to a Karbon tab (opened in the background only when an action needs one).
-importScripts('config.js', 'defaults.js', 'notes.js');
+// shortcuts, and running commands against Karbon's API (through a Karbon tab only when a direct call fails).
+importScripts('config.js', 'defaults.js', 'notes.js', 'karbon.js');
 
 const KARBON = KT_ORIGIN;
 const HEARTBEAT_MIN = 1;
@@ -110,49 +110,89 @@ chrome.notifications.onClicked.addListener(async (id) => {
   else if (s) openFinishWindow();
 });
 
-// ---- Karbon tab routing ----
-async function karbonTab() {
+// ---- Talking to Karbon ----
+// Commands call Karbon's API from here with the signed-in session, so no Karbon tab is needed.
+// When Karbon can't be reached that way, they run in a Karbon tab instead.
+const direct = KTKarbon({
+  fetch: (url, init) => fetch(url, init),
+  keys: () => chrome.storage.local.get(['tenant', 'user', 'base']),
+  onState: (state) => { handleState(state).catch(() => {}); },
+  onTimeSettings: (timeCfg) => { chrome.storage.local.set({ timeCfg }).catch(() => {}); },
+});
+
+// Karbon tabs, the one in front first, then the most recently used.
+async function karbonTabs() {
   const tabs = await chrome.tabs.query({ url: `${KARBON}*` });
-  if (!tabs.length) return null;
-  return tabs.find((t) => t.active) || tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
+  return tabs.sort((a, b) => (b.active - a.active) || ((b.lastAccessed || 0) - (a.lastAccessed || 0)));
 }
+const karbonTab = async () => (await karbonTabs())[0] || null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Opens Karbon in a background tab and waits until the extension can talk to it.
-// Concurrent callers share one opening, so Karbon never opens twice.
-let opening = null;
-function openBackgroundTab() {
-  if (!opening) opening = openBackgroundTabOnce().finally(() => { opening = null; });
-  return opening;
+// A tab's answer, or null when nothing in it is listening (still loading, or opened before the
+// extension last updated, since Chrome doesn't add content scripts to tabs that are already open).
+async function askTab(tabId, cmd, args) {
+  try { return (await chrome.tabs.sendMessage(tabId, { to: 'karbon', cmd, args })) || null; } catch { return null; }
 }
 
-async function openBackgroundTabOnce() {
-  const { tenant } = await chrome.storage.local.get('tenant');
-  const tab = await chrome.tabs.create({ url: tenant ? `${KARBON}${tenant}/` : KARBON, active: false });
+// Opens Karbon in a background tab, or reloads a tab that stopped answering, and waits until it answers.
+// Concurrent callers share one fix, so Karbon never opens or reloads twice.
+let fixing = null;
+function readyTab(stale) {
+  if (!fixing) fixing = readyTabOnce(stale).finally(() => { fixing = null; });
+  return fixing;
+}
+
+async function readyTabOnce(stale) {
+  let tab = stale;
+  if (tab) {
+    await chrome.tabs.reload(tab.id);
+  } else {
+    const { tenant } = await chrome.storage.local.get('tenant');
+    tab = await chrome.tabs.create({ url: tenant ? `${KARBON}${tenant}/` : KARBON, active: false });
+  }
   for (let i = 0; i < 40; i++) {
     await sleep(750);
-    try {
-      const r = await chrome.tabs.sendMessage(tab.id, { to: 'karbon', cmd: 'getState' });
-      if (r && r.ok) return tab;
-    } catch {}
+    const r = await askTab(tab.id, 'getState');
+    if (r && r.ok) return tab;
   }
   return tab;
 }
 
-// Actions may open Karbon in the background; reads never do.
+// Actions may open or reload Karbon; reads never do.
 const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume', 'search', 'recents']);
+const WRITES = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume']);
 
-// Error codes let the popup offer the right fix: NO_TAB opens Karbon, NOT_READY reloads it.
+// UNREACHABLE means neither Karbon's API nor a Karbon tab answered a read.
 async function toKarbon(cmd, args) {
-  let tab = await karbonTab();
-  if (!tab && NEEDS_TAB.has(cmd)) tab = await openBackgroundTab();
-  if (!tab) return { ok: false, code: 'NO_TAB', error: 'Karbon is not open in any tab.' };
+  const before = direct.writes();
   try {
-    return await chrome.tabs.sendMessage(tab.id, { to: 'karbon', cmd, args });
-  } catch {
-    return { ok: false, code: 'NOT_READY', tabId: tab.id, error: 'The Karbon tab is not ready.' };
+    const result = await direct.run(cmd, args);
+    if (direct.writes() !== before) noteDirectWrites({ ok: true });
+    return { ok: true, result };
+  } catch (e) {
+    if (!e.reach) return { ok: false, error: e.message };
+    if (WRITES.has(cmd) && !e.noKeys) noteDirectWrites({ ok: false, error: e.message });
+    return viaTab(cmd, args, e.message);
   }
+}
+
+async function viaTab(cmd, args, why) {
+  const tabs = await karbonTabs();
+  for (const t of tabs) {
+    const r = await askTab(t.id, cmd, args);
+    if (r) return r;
+  }
+  if (!NEEDS_TAB.has(cmd)) return { ok: false, code: 'UNREACHABLE', error: why };
+  const tab = await readyTab(tabs[0] || null);
+  return (await askTab(tab.id, cmd, args)) || { ok: false, error: 'Karbon did not respond. Try again in a few seconds.' };
+}
+
+// Whether timer changes work without a Karbon tab, for the Connection line. Stored only when it changes.
+async function noteDirectWrites({ ok, error = null }) {
+  const { directWrites: was } = await chrome.storage.local.get('directWrites');
+  if (was && was.ok === ok) return;
+  await chrome.storage.local.set({ directWrites: { ok, error, at: Date.now() } });
 }
 
 // Karbon's page for each kind of timer target.
@@ -271,12 +311,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     learnAccount().then(sendResponse, () => sendResponse({ signedIn: false }));
     return true;
   }
-  if (msg.type === 'hasKarbonTab') {
-    karbonTab().then((t) => sendResponse(!!t));
+  if (msg.type === 'canReach') {
+    canReach().then(sendResponse);
     return true;
   }
   return false;
 });
+
+// Karbon answers without opening anything: the direct check passed, or a Karbon tab is open.
+async function canReach() {
+  const { directApi } = await chrome.storage.local.get('directApi');
+  return !!(directApi && directApi.ok) || !!(await karbonTab());
+}
 
 async function handleState(state) {
   await chrome.storage.session.set({ state, stateAt: Date.now() });

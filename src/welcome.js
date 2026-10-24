@@ -74,8 +74,14 @@ $('showSteps').addEventListener('click', () => {
 $('openKarbon').addEventListener('click', () => chrome.tabs.create({ url: KT_ORIGIN }));
 
 // ---- Connection, in the header and under Support ----
+// w: whether the last timer change worked without a Karbon tab.
+function tabFree(w) {
+  if (!w) return 'Works without a Karbon tab. Timer changes haven\'t been tried yet.';
+  return w.ok ? 'Works without a Karbon tab.' : `Reads work without a Karbon tab. Timer changes use a Karbon tab (${w.error}).`;
+}
+
 async function showConnection() {
-  const k = await chrome.storage.local.get(['signedIn', 'user', 'directApi', 'firmName', 'cookieNote', 'keySource']);
+  const k = await chrome.storage.local.get(['signedIn', 'user', 'directApi', 'directWrites', 'firmName', 'cookieNote', 'keySource']);
   const d = k.directApi;
   let state = '', head, detail;
   if (k.signedIn === false) {
@@ -89,7 +95,7 @@ async function showConnection() {
     state = 'ok';
     head = k.firmName ? `Connected to ${k.firmName}` : 'Connected to Karbon';
     if (!d) detail = 'Signed in. The tab-free check hasn\'t run yet.';
-    else if (d.ok) detail = `Works without a Karbon tab.${k.keySource === 'tab' ? ` Account read from a Karbon tab${k.cookieNote ? `; cookie: ${k.cookieNote}` : ''}.` : ''}`;
+    else if (d.ok) detail = `${tabFree(k.directWrites)}${k.keySource === 'tab' ? ` Account read from a Karbon tab${k.cookieNote ? `; cookie: ${k.cookieNote}` : ''}.` : ''}`;
     else detail = `Signed in. Some actions open a Karbon tab (status ${d.status || 'none'}${d.error ? `, ${d.error}` : ''}).`;
   }
   $('conn').className = `conn ${state}`;

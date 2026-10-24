@@ -46,7 +46,7 @@ or taken down:
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
 | Notes on time entries | Extension | Karbon time entry | Sent to Karbon only |
 | Feedback email (version, on/off settings) | User clicks Send feedback | Not stored | Only if the user sends it |
-| Diagnostic info (cookie lookup notes, connection check) | Extension | `storage.local` | No |
+| Diagnostic info (cookie lookup notes, connection check, whether timer changes work without a Karbon tab) | Extension | `storage.local` | No |
 
 Network destinations: `app2.karbonhq.com` and Karbon's regional API hosts (`*.karbonhq.com`).
 Nothing else.
@@ -57,6 +57,15 @@ keys, or network calls. The page's "Send feedback" is the same `mailto:` the pan
 "Copy details for support" writes the same version and settings text to the clipboard from a click,
 with no `clipboardWrite` permission. The 0.7.13 timer card edits use Karbon's stopwatch API, an
 existing destination. No inventory change.
+
+Tab-free timer calls review (2026-10-24, 0.7.18): the background worker now runs timer, search,
+recents, and list calls against Karbon's regional API host itself, with the signed-in session, and
+uses a Karbon tab only when that fails. Same destination, same data, and the same calls the Karbon
+tab already made. When it falls back, an action may reload the Karbon tab or open one in the
+background. One new `storage.local` key, `directWrites`, records whether timer changes worked
+without a tab, with the time and any error text, for the Connection line. No new permissions or
+host access. The policy's open item about calling Karbon's API from the background worker now
+covers all timer calls, not just the connection check.
 
 ## Open items
 

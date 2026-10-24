@@ -3,6 +3,7 @@
 Settled design decisions for how the extension controls the Karbon timer.
 
 ## Switching and starting
+- 2026-10-24: Timer calls go straight to Karbon's API from the background, so no Karbon tab is needed. When that fails, play reloads the Karbon tab, or opens one if Karbon is closed, and tries again. The panel no longer shows a reload or open link (Max asked; routing by Claude, v0.7.18).
 - 2026-10-22: Add auto-start in addition to auto-switch (Max).
 - 2026-10-22: Work item switching uses a delayed-commit toast, "Switching timer to this work item (cancel)," rather than switch-then-undo (Max).
 - 2026-10-23: Auto-start on work items with a 2-second default, and on contacts (people, organizations, client groups) with an 8-second default (Max). The seconds are the visible cancel countdown itself; the separate dwell delay was removed.

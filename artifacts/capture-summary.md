@@ -92,4 +92,4 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
 - With only the cookie's values, and no timer ever started in the session, these calls returned 200:
   - `GET /time/api/{tenant}/stopwatches/{user}` (state "Stopped").
   - `GET /time/api/{tenant}/timeTenantSettings/{tenant}`.
-- Not yet verified: whether the extension's background worker can call `us3.karbonhq.com` with no Karbon tab open. All calls above ran from a Karbon page, which is same-site.
+- Verified 2026-10-24 (0.7.18): the extension's background worker can read and write the stopwatch on `us3.karbonhq.com` with no Karbon tab open. Karbon accepts the extension's origin and needs no CSRF token or connection ID.

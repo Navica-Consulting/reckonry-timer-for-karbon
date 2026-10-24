@@ -20,26 +20,13 @@ const noteFor = async (event, ctx) => KTNotes.note(event, await level(), ctx);
 // A blank timer (no work item yet) still counts as running.
 const isActive = (s) => !!(s && s.state && s.state !== 'Stopped');
 
-// ---- Status line, with a fix-it link when Karbon is closed or not ready ----
-function say(text, fix) {
-  const msg = $('msg');
-  msg.textContent = text;
-  if (!fix) return;
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'linklike';
-  b.textContent = fix.label;
-  b.addEventListener('click', fix.run);
-  msg.append(' ', b);
+// ---- Status line ----
+// Actions open or reload Karbon on their own when they need a tab, so there is no fix-it link.
+function say(text) {
+  $('msg').textContent = text;
 }
 
 function sayError(r) {
-  if (r && r.code === 'NO_TAB') {
-    return say('Karbon is not open.', { label: 'Open Karbon in a new tab', run: () => { chrome.tabs.create({ url: KARBON }); window.close(); } });
-  }
-  if (r && r.code === 'NOT_READY') {
-    return say('The Karbon tab is not ready.', { label: 'Reload the Karbon tab', run: () => { chrome.tabs.reload(r.tabId); say('Reloading Karbon. Try again in a few seconds.'); } });
-  }
   say((r && r.error) || 'Something went wrong.');
 }
 
@@ -135,7 +122,7 @@ async function refresh() {
   const r = await send('getState');
   if (r && r.ok) return render(r.result);
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
-  if (r && r.code !== 'NO_TAB') sayError(r);
+  if (r && r.code !== 'UNREACHABLE') sayError(r);
 }
 
 async function run(cmd, args, done) {
@@ -385,7 +372,7 @@ async function loadLookups() {
     fillSelect($('taskType'), (lk && lk.taskTypes) || [], $('taskType').value || d.taskTypeKey, 'task type');
   };
   paint(d.lookups);
-  if (!(await chrome.runtime.sendMessage({ type: 'hasKarbonTab' }))) return;
+  if (!(await chrome.runtime.sendMessage({ type: 'canReach' }))) return;
   const r = await send('lookups');
   if (!r || !r.ok || !r.result) return;
   const lk = {
@@ -436,8 +423,8 @@ function showResults(box, head, items) {
 }
 
 async function loadRecents(force, box = BOX.start) {
-  const hasTab = await chrome.runtime.sendMessage({ type: 'hasKarbonTab' });
-  if (!hasTab && !force) {
+  const reach = await chrome.runtime.sendMessage({ type: 'canReach' });
+  if (!reach && !force) {
     $(box.head).replaceChildren(el('button', { type: 'button', class: 'linklike', onclick: () => loadRecents(true, box) }, 'Show recent work items'));
     $(box.list).replaceChildren();
     return;
