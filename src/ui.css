@@ -130,3 +130,8 @@ input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:v
 .nest.off .opt { cursor:default; }
 /* A dimmed row inside a dimmed area shouldn't fade twice. */
 .off .off { opacity:1; }
+/* Toolbar icon previews, each on a sample toolbar color so both stay visible in either theme. */
+.swatch { width:30px; height:30px; flex:none; display:grid; place-items:center; border-radius:6px; border:1px solid var(--line); }
+.swatch img { width:18px; height:18px; }
+.swatch.on-light { background:#f1f3f4; }
+.swatch.on-dark { background:#35363a; }

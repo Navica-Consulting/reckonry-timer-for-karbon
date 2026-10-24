@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage, v0.7.4. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab and no first timer. The setup guide has three steps. Nested preferences are a plain indent. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.7 are committed to `main` but not tagged or pushed. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
 
 ## Next step
-Reload `unpacked/production` in Chrome. Check the new Preferences layout. Then open Preferences, then Troubleshooting, and read the Connection line: it says whether the background can reach Karbon's API without a tab. Then run one blank start, open a work item, and finish.
+Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshooting, and read the Connection line: it says whether the background can reach Karbon's API without a tab. Then run one blank start, open a work item, and finish.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -18,7 +18,8 @@ Reload `unpacked/production` in Chrome. Check the new Preferences layout. Then o
 - Privacy policy: the hosted policy (effective 2026-10-23) predates the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, and Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md`; the policy source is `docs/privacy-policy.md` (waiting on: Max).
 - Tab-free API calls: v0.7.2 checks once whether the background worker can call `{dataCenterUrl}/api/...` with the session cookie and no Karbon tab. The store pipeline's status check doesn't answer this. If it works, the next step is moving reads (state, search, recents) and then actions to the background, with the tab as fallback (waiting on: Max's Connection line).
 - Settings walkthrough: recommendations for a "Your settings, explained" section in the setup guide, after moving `DEFAULTS` into a shared `src/defaults.js`, are in `artifacts/settings-walkthrough-review.md`. Not built (waiting on: Max).
-- Theme setting: dark toolbar icons are in `src/icons/*-dark.png` but not used yet. The plan for a light, dark, and system choice, and switching the toolbar icon, is in `artifacts/theme-plan.md`, with three questions for Max (waiting on: Max).
+- Toolbar icon color: 0.7.5 lets the person pick a dark or light toolbar icon, in setup step 1 and in Preferences. No theme setting; pages keep following the system. 0.7.6 gives the manifest icons a white face and a thin white outline so they show on a dark extensions page. Details in `artifacts/theme-plan.md` (waiting on: Max's review).
+- Work and Clients preferences: 0.7.7 gives contacts their own choice of Auto-start, Remind me, or Do nothing, with new settings `remindContacts` and `contactNudgeSeconds`. Max checked it in Chrome on 2026-10-23. Not tagged, so the scheduled 0.7.4 task isn't affected (waiting on: nothing).
 - Multiple tenants: the bootstrap cookie names the user's default tenant. A Karbon tab's URL still wins for that tab. Not tested with a user who works in several tenants (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
 - Required "None" values: the finish form treats a role or task type named "None" as empty when the firm requires one. Not tested on a firm with `isActorRequired` or `isTaskTypeRequired` on (waiting on: a firm with those settings).
@@ -39,6 +40,13 @@ Reload `unpacked/production` in Chrome. Check the new Preferences layout. Then o
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-23, Work and Clients preferences (Claude Code)
+- Split the no-timer preference into two groups, "Work" and "Clients," each with Auto-start, Remind me, or Do nothing and its own seconds.
+- Contacts can now get a start reminder. Contact auto-start no longer depends on work-item auto-start.
+- Added an upgrade step for 0.7.7 that keeps contact auto-start off where it was in effect off. Bumped to 0.7.7 and rebuilt.
+- Updated the setup guide, the feedback email, the `docs/PRIVACY.md` inventory, and `context/timer-behavior.md`.
+- Max checked it in Chrome. Committed 0.7.5 through 0.7.7 to `main`, untagged.
+
 ### 2026-10-23, repository and release setup (Claude Code)
 - Initialized git, imported the 0.6.1 through 0.7.3 source zips as tagged commits, and pushed to the empty GitHub repo.
 - Moved zips to `dist/`. Added `.gitignore`, `README.md`, a root `CLAUDE.md`, and `docs/` (releasing, privacy tracking, and the policy text).

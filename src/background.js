@@ -4,10 +4,11 @@ importScripts('config.js', 'notes.js');
 
 const DEFAULTS = {
   autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-  autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
+  remindContacts: false, contactNudgeSeconds: 60,
+    autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
   pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: false,
   longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
-  noteLevel: 'auto', debugLog: false,
+  noteLevel: 'auto', debugLog: false, toolbarTheme: 'light',
 };
 const KARBON = KT_ORIGIN;
 const HEARTBEAT_MIN = 1;
@@ -16,6 +17,16 @@ const COLORS = { run: '#2e7d32', long: '#f2c94c', paused: '#6b7280', none: '#c62
 
 const isKarbon = (url) => typeof url === 'string' && url.startsWith(KARBON);
 const settings = () => chrome.storage.sync.get(DEFAULTS);
+
+// Chrome has no dark-theme toolbar icon in the manifest, and some light themes have a dark toolbar,
+// so the person picks the theme the icon should suit.
+async function applyIcon() {
+  const { toolbarTheme } = await settings();
+  const suffix = toolbarTheme === 'dark' ? '-light' : '';
+  const path = {};
+  for (const size of [16, 32, 48]) path[size] = `icons/icon${size}${suffix}.png`;
+  await chrome.action.setIcon({ path });
+}
 const cachedState = async () => (await chrome.storage.session.get('state')).state || null;
 
 // ---- Elapsed time, badge, and tooltip ----
@@ -481,11 +492,19 @@ async function boot() {
   const existing = await chrome.alarms.get('dayEnd');
   if (!existing) scheduleDayEnd();
   applyIdleInterval();
+  applyIcon().catch(() => {});
   refreshBadge();
   learnAccount().catch(() => {});
 }
 
-chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+// True when an update comes from a version older than v ("0.7.7").
+const before = (prev, v) => {
+  const a = String(prev || '').split('.').map(Number), b = v.split('.').map(Number);
+  for (let i = 0; i < b.length; i++) if ((a[i] || 0) !== b[i]) return (a[i] || 0) < b[i];
+  return false;
+};
+
+chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
   // Older drafts had a separate auto-start checkbox; carry that choice over.
   // Carry older choices into the auto-start settings. A stored noTimerAction means the person chose it,
   // so "none" or "nudge" keeps work-item auto-start off; "start" (or the oldest autoStart checkbox) turns it on.
@@ -500,6 +519,13 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   // 0.7.1: the long-timer alert became a switch. An old "0 hours" meant off.
   const lt = await chrome.storage.sync.get(['longTimerAlert', 'longTimerHours']);
   if (lt.longTimerAlert === undefined && lt.longTimerHours === 0) Object.assign(carry, { longTimerAlert: false, longTimerHours: 3 });
+  // 0.7.7: contacts got their own choice. Contact auto-start used to apply only while
+  // work-item auto-start was on, so keep it off for anyone who had work-item auto-start off.
+  if (reason === 'update' && before(previousVersion, '0.7.7')) {
+    const c = await chrome.storage.sync.get({ autoStartWork: true, autoStartContacts: false });
+    const work = carry.autoStartWork ?? c.autoStartWork;
+    if (c.autoStartContacts && !work) carry.autoStartContacts = false;
+  }
   if (Object.keys(carry).length) await chrome.storage.sync.set(carry);
   // 0.7.1: the default work item was removed.
   await chrome.storage.local.remove('defaultWork');
@@ -511,5 +537,6 @@ chrome.runtime.onStartup.addListener(boot);
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'sync') return;
   if (changes.idleMinutes) applyIdleInterval();
+  if (changes.toolbarTheme) applyIcon().catch(() => {});
   if (changes.showIdleBadge || changes.badgeWhere || changes.longTimerHours || changes.longTimerAlert) refreshBadge();
 });

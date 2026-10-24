@@ -31,12 +31,22 @@
     li + li { margin-top:6px; }
     kbd { font:13px ui-monospace, monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 5px; }
     .callout { border-left:4px solid #f2c94c; }
+    .icon-pick { border:0; margin:12px 0 0; padding:0; }
+    .icon-pick legend { padding:0; font-size:15px; font-weight:600; }
+    .icon-pick .choices { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
+    .icon-pick label { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:10px; padding:8px 12px; cursor:pointer; font-size:15px; }
+    .icon-pick label:has(input:checked) { border-color:var(--accent); }
+    .icon-pick input { margin:0; width:18px; height:18px; accent-color:var(--accent); }
+    .swatch { width:36px; height:36px; display:grid; place-items:center; border-radius:6px; border:1px solid var(--line); }
+    .swatch img { width:20px; height:20px; }
+    .swatch.on-light { background:#f1f3f4; }
+    .swatch.on-dark { background:#35363a; }
   </style>
 </head>
 <body>
 <main>
   <div class="brand">
-    <img src="icons/icon128.png" alt="">
+    <picture><source srcset="icons/icon128-light.png" media="(prefers-color-scheme: dark)"><img src="icons/icon128.png" alt=""></picture>
     <h1>Reckonry Timer for Karbon</h1>
   </div>
   <p class="lede">A stopwatch for your Karbon timer that follows you around the browser. Start, pause, and switch timers from any site, and let the extension handle the forgettable parts.</p>
@@ -50,6 +60,13 @@
           <div class="step-title">Pin the stopwatch to your toolbar</div>
           <div class="step-body">Click the puzzle piece next to the address bar, then the pin beside Reckonry Timer for Karbon. The badge then shows your running time on every site.</div>
           <div class="status" aria-live="polite"></div>
+          <fieldset class="icon-pick">
+            <legend>Pick the icon color that's easiest to see on your toolbar</legend>
+            <div class="choices">
+              <label><input type="radio" name="toolbarTheme" value="light"><span class="swatch on-light"><img src="icons/icon32.png" alt=""></span><span>For light themes</span></label>
+              <label><input type="radio" name="toolbarTheme" value="dark"><span class="swatch on-dark"><img src="icons/icon32-light.png" alt=""></span><span>For dark themes</span></label>
+            </div>
+          </fieldset>
         </div>
       </li>
       <li id="s-karbon">
@@ -65,7 +82,7 @@
         <span class="mark" aria-hidden="true">3</span>
         <div>
           <div class="step-title">Choose your preferences</div>
-          <div class="step-body">Click the stopwatch, then open Preferences. When you open a work item with no timer running, choose to auto-start a timer (the default, with a 2-second countdown you can cancel), get a reminder, or do nothing. Auto-switch, which moves a running timer to the item you open, is off until you turn it on.</div>
+          <div class="step-body">Click the stopwatch, then open Preferences. When you open a work item with no timer running, choose to auto-start a timer (the default, with a 2-second countdown you can cancel), get a reminder, or do nothing. Make the same choice for contacts, which do nothing by default. Auto-switch, which moves a running timer to the item you open, is off until you turn it on.</div>
           <div class="status" aria-live="polite"></div>
         </div>
       </li>

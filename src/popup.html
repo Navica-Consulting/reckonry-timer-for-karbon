@@ -79,8 +79,8 @@
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     </summary>
     <form id="prefs">
-      <fieldset class="group" aria-describedby="startNote">
-        <legend><h3>When I open a work item with no timer running</h3></legend>
+      <fieldset class="group">
+        <legend><h3>Work</h3></legend>
         <label class="opt radio">
           <span class="txt">Auto-start a timer<span class="sub">After a countdown you can cancel</span></span>
           <input type="radio" name="startMode" value="auto">
@@ -90,16 +90,6 @@
             <span class="txt">Start after</span>
             <span class="num"><input type="number" name="workStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a work item"> sec</span>
           </label>
-          <label class="opt" data-when="contacts">
-            <span class="txt">Also on contacts<span class="sub" id="contactsSub">People, organizations, and client groups</span></span>
-            <input type="checkbox" class="switch" role="switch" name="autoStartContacts">
-          </label>
-          <div class="nest" data-when="contactWait">
-            <label class="opt">
-              <span class="txt">Start contacts after</span>
-              <span class="num"><input type="number" name="contactStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a contact"> sec</span>
-            </label>
-          </div>
         </div>
         <label class="opt radio">
           <span class="txt">Remind me to start one</span>
@@ -108,12 +98,41 @@
         <div class="nest" data-when="modeNudge">
           <label class="opt">
             <span class="txt">Remind me after</span>
-            <span class="num"><input type="number" name="nudgeSeconds" min="10" max="600" aria-label="Seconds before a reminder"> sec</span>
+            <span class="num"><input type="number" name="nudgeSeconds" min="10" max="600" aria-label="Seconds before a reminder on a work item"> sec</span>
           </label>
         </div>
         <label class="opt radio">
           <span class="txt">Do nothing</span>
           <input type="radio" name="startMode" value="none">
+        </label>
+      </fieldset>
+
+      <fieldset class="group" aria-describedby="startNote">
+        <legend><h3>Clients</h3></legend>
+        <p id="contactsSub" class="sub-note">People, organizations, and client groups.</p>
+        <label class="opt radio">
+          <span class="txt">Auto-start a timer<span class="sub">After a countdown you can cancel</span></span>
+          <input type="radio" name="contactMode" value="auto">
+        </label>
+        <div class="nest" data-when="contactAuto">
+          <label class="opt">
+            <span class="txt">Start after</span>
+            <span class="num"><input type="number" name="contactStartSeconds" min="1" max="60" aria-label="Seconds before a timer starts on a contact"> sec</span>
+          </label>
+        </div>
+        <label class="opt radio">
+          <span class="txt">Remind me to start one</span>
+          <input type="radio" name="contactMode" value="nudge">
+        </label>
+        <div class="nest" data-when="contactNudge">
+          <label class="opt">
+            <span class="txt">Remind me after</span>
+            <span class="num"><input type="number" name="contactNudgeSeconds" min="10" max="600" aria-label="Seconds before a reminder on a contact"> sec</span>
+          </label>
+        </div>
+        <label class="opt radio">
+          <span class="txt">Do nothing</span>
+          <input type="radio" name="contactMode" value="none">
         </label>
         <p id="startNote" class="sub-note">Starting a timer from this panel always works, with or without a work item.</p>
       </fieldset>
@@ -198,6 +217,20 @@
           </select>
         </div>
       </section>
+
+      <fieldset class="group">
+        <legend><h3>Toolbar icon</h3></legend>
+        <label class="opt radio">
+          <span class="txt">For light themes</span>
+          <input type="radio" name="toolbarTheme" value="light">
+          <span class="swatch on-light"><img src="icons/icon32.png" alt=""></span>
+        </label>
+        <label class="opt radio">
+          <span class="txt">For dark themes</span>
+          <input type="radio" name="toolbarTheme" value="dark">
+          <span class="swatch on-dark"><img src="icons/icon32-light.png" alt=""></span>
+        </label>
+      </fieldset>
 
       <section class="group" aria-labelledby="gLog">
         <h3 id="gLog">Troubleshooting</h3>

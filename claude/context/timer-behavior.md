@@ -5,7 +5,7 @@ Settled design decisions for how the extension controls the Karbon timer.
 ## Switching and starting
 - 2026-10-22: Add auto-start in addition to auto-switch (Max).
 - 2026-10-22: Work item switching uses a delayed-commit toast, "Switching timer to this work item (cancel)," rather than switch-then-undo (Max).
-- 2026-10-23: Auto-start on work items with a 2-second default, and optional auto-start on contacts (people, organizations, client groups) with an 8-second default (Max). The seconds are the visible cancel countdown itself; the separate dwell delay was removed.
+- 2026-10-23: Auto-start on work items with a 2-second default, and on contacts (people, organizations, client groups) with an 8-second default (Max). The seconds are the visible cancel countdown itself; the separate dwell delay was removed.
 - 2026-10-23: The start panel follows Karbon's field order (Work, Role, Task type, Notes) and is always visible. Picking a work item selects it; the play button starts it (Max).
 - 2026-10-23: The default work item was removed (Max).
 
@@ -21,11 +21,12 @@ Settled design decisions for how the extension controls the Karbon timer.
 ## Setup (v0.7.2 and later)
 - 2026-10-23: No "Start your first timer" step. Setup is pin, connect to Karbon (automatic from the sign-in already in the browser), and preferences (Max asked to remove the step; flow by Claude).
 
-## Preferences (v0.7.1 layout)
-- 2026-10-23: Order: When I open a work item with no timer running; Auto-switch; Away from the computer; Alerts and badge; Time entries; Troubleshooting (Max asked for logical order; grouping by Claude).
-- 2026-10-23: The no-timer choice is one of three: Auto-start, Remind me, or Do nothing. Each option's settings are nested under it. Contact auto-start is nested under Auto-start and only applies while it is on (Max).
+## Preferences
+- 2026-10-23: Order: Work; Clients; Auto-switch; Away from the computer; Alerts and badge; Time entries; Troubleshooting (Max asked for logical order; grouping by Claude).
+- 2026-10-23: Work items and contacts each get their own choice for opening with no timer running: Auto-start, Remind me, or Do nothing. The groups are headed "Work" and "Clients"; the choices explain themselves. Each option's seconds nest under it. Contacts default to Do nothing (Max, v0.7.7).
+- 2026-10-23: Upgrades from before 0.7.7 turn contact auto-start off where work-item auto-start was off, since contact auto-start used to apply only under it (Claude).
 - 2026-10-23: Auto-switch is its own section below, with its own countdown, "Switch after," defaulting to 2 seconds (Max asked for the section; separate countdown by Claude).
-- 2026-10-23: Nested settings are a plain indent that lines up with the parent's label text, with no shaded box or accent edge. They dim when the parent is off. Radios sit before their labels. "Start contacts after" nests under "Also on contacts" (Max rejected the v0.7.1 shaded area with an accent edge; layout by Claude, v0.7.4).
+- 2026-10-23: Nested settings are a plain indent that lines up with the parent's label text, with no shaded box or accent edge. They dim when the parent is off. Radios sit before their labels (Max rejected the v0.7.1 shaded area with an accent edge; layout by Claude, v0.7.4).
 - 2026-10-23: The long-timer alert is a switch, with the hours nested under it. Upgrades turn the switch off where the hours were set to 0 (Max).
 - 2026-10-22: Auto-pause, auto-resume, and auto-start are user preferences, not fixed behavior (Max).
 - 2026-10-23: Work-item auto-start is the default; upgrades keep an explicit earlier choice of "do nothing" or "remind me" (Claude, from Max's request; confirm).
@@ -36,3 +37,6 @@ Settled design decisions for how the extension controls the Karbon timer.
 ## Pausing and away time
 - 2026-10-22: Pause on screen lock. On wake after sleep, flag the away time in the time entry note rather than backdating (Max).
 - 2026-10-22: Auto-pause appends a note to the time entry: "Auto paused at [datetime]" (Max).
+
+## Work-only firms
+- 2026-10-23: Firms that book time to work items only still get the Clients preferences. Opening a contact can start or suggest a timer, but it starts with no work item, and the finish form asks for one at stop. A blank timer running when a contact opens gets no finish prompt, since the contact can't take the time (Max asked to keep contact timers; details by Claude, v0.7.8).

@@ -17,7 +17,8 @@ const STEPS = {
     return { done: (await chrome.action.getUserSettings()).isOnToolbar };
   },
   karbon: karbonStatus,
-  prefs: async () => ({ done: Object.keys(await chrome.storage.sync.get(null)).length > 0 }),
+  // The icon color is chosen on this page, so it doesn't count as visiting Preferences.
+  prefs: async () => ({ done: Object.keys(await chrome.storage.sync.get(null)).some((k) => k !== 'toolbarTheme') }),
 };
 const DONE_TEXT = {
   pin: () => 'Pinned.',
@@ -46,5 +47,13 @@ async function check() {
 }
 
 document.getElementById('openKarbon').addEventListener('click', () => chrome.tabs.create({ url: KT_ORIGIN }));
+
+// Toolbar icon color, also in Preferences.
+const iconPick = document.querySelectorAll('input[name="toolbarTheme"]');
+chrome.storage.sync.get({ toolbarTheme: 'light' }).then(({ toolbarTheme }) => {
+  for (const r of iconPick) r.checked = r.value === toolbarTheme;
+});
+for (const r of iconPick) r.addEventListener('change', () => chrome.storage.sync.set({ toolbarTheme: r.value }));
+
 check();
 setInterval(check, 2000);

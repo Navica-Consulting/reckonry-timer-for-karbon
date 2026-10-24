@@ -3,6 +3,7 @@
 (() => {
   const DEFAULTS = {
     autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
+    remindContacts: false, contactNudgeSeconds: 60,
     autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
     noteLevel: 'auto', debugLog: false,
   };
@@ -90,7 +91,7 @@
   };
   const here = (key) => { const i = itemFromPath(); return !!i && i.key === key; };
   const focused = () => document.visibilityState === 'visible' && document.hasFocus();
-  const dismissed = new Set(); // work items whose reminder you dismissed in this tab
+  const dismissed = new Set(); // items whose reminder you dismissed in this tab
   const SETTLE_MS = 600;       // let the page finish routing before checking the timer
 
   let lastKey = null;
@@ -119,28 +120,30 @@
     if (!here(key)) return;
     if (!focused()) return log('skipped: Karbon tab not focused');
     const isWork = linkType === 'WorkItem';
-    if (!isWork) {
-      const { timeCfg } = await chrome.storage.local.get('timeCfg');
-      if (timeCfg && timeCfg.workOnly) return log('skipped: this firm books time to work items only');
-    }
+    // Work-only firms still start timers from contacts, just with no work item attached.
+    const { timeCfg } = await chrome.storage.local.get('timeCfg');
+    const blankOnly = !isWork && !!(timeCfg && timeCfg.workOnly);
     const state = await readState();
     if (!state) return;
     const running = state.state !== 'Stopped';
     log(`timer ${state.state}, same item: ${state.work === key}`);
     if (state.work === key) return;
     // A running timer with no work item: always ask, whatever the settings, and keep asking until answered.
-    if (running && !state.work) return showFinishPrompt(item, s);
+    // A contact can't take the time in a work-only firm, so there is nothing to offer.
+    if (running && !state.work) return blankOnly ? log('blank timer running; contact cannot take it') : showFinishPrompt(item, s);
 
-    // Contact auto-start sits under work-item auto-start, so it only applies while that is on.
-    const wanted = isWork ? (s.autoStartWork || s.autoSwitch || s.remindNoTimer) : s.autoStartWork && s.autoStartContacts;
+    // Work items and contacts each have their own choice: auto-start, remind, or nothing.
+    const canStart = isWork ? s.autoStartWork : s.autoStartContacts;
+    const remind = isWork ? s.remindNoTimer : s.remindContacts;
+    const wanted = canStart || remind || (isWork && s.autoSwitch);
     if (!wanted) return log(`${KIND[item.linkType]} opened; automation is off for it`);
     const seconds = isWork ? s.workStartSeconds : s.contactStartSeconds;
-    const canStart = isWork ? s.autoStartWork : s.autoStartWork && s.autoStartContacts;
+    const remindSeconds = isWork ? s.nudgeSeconds : s.contactNudgeSeconds;
     // Contacts only take over a running timer when contact auto-start is on.
-    if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, s.switchSeconds);
-    if (!running && canStart) return autoAct(item, s, false, seconds);
-    if (!running && isWork && s.remindNoTimer && !dismissed.has(key)) {
-      timers.push(setTimeout(() => nudge(item, s), Math.max(0, s.nudgeSeconds * 1000 - SETTLE_MS)));
+    if (running && s.autoSwitch && (isWork || canStart)) return autoAct(item, s, true, s.switchSeconds, blankOnly);
+    if (!running && canStart) return autoAct(item, s, false, seconds, blankOnly);
+    if (!running && remind && !dismissed.has(key)) {
+      timers.push(setTimeout(() => nudge(item, s), Math.max(0, remindSeconds * 1000 - SETTLE_MS)));
     }
   }
 
@@ -222,10 +225,11 @@
     if (st && (st.state === 'Stopped' || st.work)) removePrompt();
   }, 5000);
 
-  async function autoAct(item, s, switching, seconds) {
+  async function autoAct(item, s, switching, seconds, blankOnly = false) {
     const kind = KIND[item.linkType];
     const go = await showToast({
-      text: switching ? `Switching timer to this ${kind}` : `Starting timer on this ${kind}`,
+      text: blankOnly ? (switching ? 'Saving this timer and starting one with no work item' : 'Starting a timer with no work item')
+        : switching ? `Switching timer to this ${kind}` : `Starting timer on this ${kind}`,
       seconds: Math.max(1, Number(seconds) || 1), mode: 'countdown',
     });
     if (!go || !here(item.key)) return log('cancelled');
@@ -248,7 +252,7 @@
     if (!here(item.key) || !focused()) return;
     const state = await readState();
     if (!state || state.state !== 'Stopped') return;
-    const go = await showToast({ text: 'No timer is running on this work item.', seconds: 20, mode: 'confirm', confirmLabel: 'Start timer' });
+    const go = await showToast({ text: `No timer is running on this ${KIND[item.linkType]}.`, seconds: 20, mode: 'confirm', confirmLabel: 'Start timer' });
     if (!go) { dismissed.add(item.key); return; }
     try {
       await pageCall('start', await startArgs(item, { note: KTNotes.note('nudgeStart', s.noteLevel) }));

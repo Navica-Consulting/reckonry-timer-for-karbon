@@ -1,9 +1,10 @@
 const DEFAULTS = {
   autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-  autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
+  remindContacts: false, contactNudgeSeconds: 60,
+    autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
   pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: false,
   longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
-  noteLevel: 'auto', debugLog: false,
+  noteLevel: 'auto', debugLog: false, toolbarTheme: 'light',
 };
 const KARBON = KT_ORIGIN;
 // Interim feedback address until a permanent one is chosen.
@@ -288,23 +289,29 @@ $('q').addEventListener('input', () => {
 });
 
 // ---- Preferences ----
-// The "no timer running" choice is one radio group stored as two switches: autoStartWork and remindNoTimer.
-const startMode = (s) => (s.autoStartWork ? 'auto' : s.remindNoTimer ? 'nudge' : 'none');
+// Each "no timer running" choice is one radio group stored as two switches: auto-start and remind.
+const MODES = {
+  startMode: ['autoStartWork', 'remindNoTimer'],
+  contactMode: ['autoStartContacts', 'remindContacts'],
+};
+const modeOf = (s, name) => { const [a, r] = MODES[name]; return s[a] ? 'auto' : s[r] ? 'nudge' : 'none'; };
 
 (async () => {
   const s = await chrome.storage.sync.get(DEFAULTS);
   const form = $('prefs');
   for (const f of form.elements) {
-    if (f.name === 'startMode') { f.checked = f.value === startMode(s); continue; }
+    if (f.name in MODES) { f.checked = f.value === modeOf(s, f.name); continue; }
     if (!(f.name in s)) continue;
-    if (f.type === 'checkbox') f.checked = !!s[f.name];
+    if (f.type === 'radio') f.checked = f.value === s[f.name];
+    else if (f.type === 'checkbox') f.checked = !!s[f.name];
     else f.value = s[f.name];
   }
   form.addEventListener('change', (e) => {
     const f = e.target;
     let v;
-    if (f.name === 'startMode') {
-      chrome.storage.sync.set({ autoStartWork: f.value === 'auto', remindNoTimer: f.value === 'nudge' });
+    if (f.name in MODES) {
+      const [a, r] = MODES[f.name];
+      chrome.storage.sync.set({ [a]: f.value === 'auto', [r]: f.value === 'nudge' });
     } else {
       if (f.type === 'checkbox') v = f.checked;
       else if (f.type === 'number') v = Math.max(Number(f.min) || 0, Number.isFinite(Number(f.value)) && f.value !== '' ? Number(f.value) : DEFAULTS[f.name]);
@@ -320,12 +327,11 @@ const startMode = (s) => (s.autoStartWork ? 'auto' : s.remindNoTimer ? 'nudge' :
 // Dim and disable settings that only matter when another one is on.
 function updateDeps() {
   const f = $('prefs').elements;
-  const mode = (f.startMode.value || 'none');
   const on = {
-    modeAuto: mode === 'auto',
-    modeNudge: mode === 'nudge',
-    contacts: !workOnly(),
-    contactWait: !workOnly() && f.autoStartContacts.checked,
+    modeAuto: f.startMode.value === 'auto',
+    modeNudge: f.startMode.value === 'nudge',
+    contactAuto: f.contactMode.value === 'auto',
+    contactNudge: f.contactMode.value === 'nudge',
     autoSwitch: f.autoSwitch.checked,
     idlePause: f.idlePause.checked,
     anyPause: f.pauseOnLock.checked || f.idlePause.checked,
@@ -369,7 +375,8 @@ $('feedback').addEventListener('click', async () => {
     'What happened, or what would you like to see?', '', '', '',
     '---',
     `Version: ${v}`, `Chrome: ${chromeVer}`,
-    `No timer: ${startMode(s)}${s.autoStartWork ? ` (work ${s.workStartSeconds}s, contacts ${s.autoStartContacts ? `${s.contactStartSeconds}s` : 'off'})` : ''}`,
+    `No timer, work items: ${modeOf(s, 'startMode')} (start ${s.workStartSeconds}s, remind ${s.nudgeSeconds}s)`,
+    `No timer, contacts: ${modeOf(s, 'contactMode')} (start ${s.contactStartSeconds}s, remind ${s.contactNudgeSeconds}s)`,
     `Auto-switch: ${s.autoSwitch ? `${s.switchSeconds}s` : 'off'}`, `Long-timer alert: ${s.longTimerAlert ? `${s.longTimerHours}h` : 'off'}`,
     `Badge: ${s.badgeWhere}`, `Notes level: ${s.noteLevel}`,
     `Settings on: ${on}`, `Work items only: ${workOnly() ? 'yes' : 'no'}`,
@@ -393,7 +400,7 @@ $('feedback').addEventListener('click', async () => {
   if (workOnly()) {
     $('q').placeholder = 'Search work items';
   }
-  if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only';
+  if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
   updateDeps();
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();

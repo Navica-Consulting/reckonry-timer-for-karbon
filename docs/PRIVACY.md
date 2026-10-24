@@ -32,7 +32,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.3)
+## Data inventory (as of 0.7.7)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -42,7 +42,7 @@ or taken down:
 | Open work item or contact (address, title, client) | Karbon page | Memory, recents | No |
 | Roles, task types, last-used role and task type | Karbon API | `storage.local` | No |
 | Firm time settings (work-only, notes required) | Karbon API | `storage.local` | No |
-| Settings | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
+| Settings, including the toolbar icon color (0.7.5) and contact reminders (0.7.7) | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
 | Notes on time entries | Extension | Karbon time entry | Sent to Karbon only |
 | Feedback email (version, on/off settings) | User clicks Send feedback | Not stored | Only if the user sends it |

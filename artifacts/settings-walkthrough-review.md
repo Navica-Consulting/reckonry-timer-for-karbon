@@ -26,7 +26,7 @@ These have effects users are unlikely to predict from the label alone.
 
 - **Notes on time entries** (default: Automatic actions only). Notes go into entry descriptions, which can appear on timesheets and invoices. This is the setting a firm admin most needs to understand.
 - **Auto-switch** (default: Off, 2 sec). Saves the current entry before moving the timer. A timer with no work item never switches on its own.
-- **Also on contacts** (default: Off, 8 sec). The longer delay than work items (2 sec) is deliberate, so quickly looking someone up does not start a timer. Users should know it is intentional.
+- **Clients** (default: Do nothing; 8 sec to start, 60 sec to remind). Called "Also on contacts" before 0.7.7. The longer start delay than work items (2 sec) is deliberate, so quickly looking someone up does not start a timer. Users should know it is intentional.
 - **Show the timer badge** (default: Away from Karbon). Users may wonder why the badge disappears while they are in Karbon.
 - **Resume when I come back** (default: Off). Tip should explain the tradeoff: convenience versus logging time you did not intend to.
 - **Pause when I'm idle** (default: Off, 10 min). Worth explaining how it differs from Pause when my screen locks (default: On).
