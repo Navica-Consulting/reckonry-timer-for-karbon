@@ -1,12 +1,6 @@
 // Isolated-world bridge between the extension and page.js. Also watches SPA route changes for
 // work item and contact pages: auto-start, auto-switch, or a start reminder, each through an accessible toast.
 (() => {
-  const DEFAULTS = {
-    autoStartWork: true, workStartSeconds: 1, autoStartContacts: false, contactStartSeconds: 5,
-    remindContacts: true, contactNudgeSeconds: 60,
-    autoSwitch: true, autoSwitchContacts: false, switchSeconds: 1, remindNoTimer: false, nudgeSeconds: 60,
-    noteLevel: 'auto', debugLog: false,
-  };
   const pending = new Map();
   let seq = 0;
 

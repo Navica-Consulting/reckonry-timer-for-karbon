@@ -32,7 +32,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.11)
+## Data inventory (as of 0.7.14)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -50,6 +50,13 @@ or taken down:
 
 Network destinations: `app2.karbonhq.com` and Karbon's regional API hosts (`*.karbonhq.com`).
 Nothing else.
+
+Settings and help page review (2026-10-23, 0.7.14): `welcome.html` became the settings page and
+is registered as `options_ui`, which is not a permission. No new permissions, host access, storage
+keys, or network calls. The page's "Send feedback" is the same `mailto:` the panel already had, and
+"Copy details for support" writes the same version and settings text to the clipboard from a click,
+with no `clipboardWrite` permission. The 0.7.13 timer card edits use Karbon's stopwatch API, an
+existing destination. No inventory change.
 
 ## Open items
 

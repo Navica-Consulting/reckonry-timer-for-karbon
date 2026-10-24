@@ -8,11 +8,13 @@ Settled design decisions for how the extension controls the Karbon timer.
 - 2026-10-23: Auto-start on work items with a 2-second default, and on contacts (people, organizations, client groups) with an 8-second default (Max). The seconds are the visible cancel countdown itself; the separate dwell delay was removed.
 - 2026-10-23: The start panel follows Karbon's field order (Work, Role, Task type, Notes) and is always visible. Picking a work item selects it; the play button starts it (Max).
 - 2026-10-23: The default work item was removed (Max).
+- 2026-10-23: With a timer running, the swap button asks what to do with it: Save and switch, Discard and switch, or Cancel. Then the new timer starts. Nothing needs to be chosen, so a blank timer can replace another, and the start fields stay editable while the question is open. A save that is missing details goes to the finish form, as before (Max asked; buttons by Claude, v0.7.14).
 
 ## Blank start and finishing (v0.7.0 and later)
 - 2026-10-23: Karbon allows a timer with no work item, contact, role, or task type. The extension can start a timer from anywhere with nothing chosen; work is optional at start (Max).
 - 2026-10-23: When a stop or switch from the extension finds missing details, the timer is paused and a finish form asks for them. Required: a work item or contact always; role, task type, and notes when the firm requires them (Max).
 - 2026-10-23: The finish form's values go straight into the saved time entry (POST). The running stopwatch is never edited, so no uncaptured call is needed (Claude).
+- 2026-10-23: While a timer runs, the panel's timer card keeps its work item (or contact, where the firm allows contact time), role, and task type visible and editable. Required ones that are missing get a red outline. Edits use the stopwatch `update` call, which was only captured for notes, so each edit is re-read and reported as failed if Karbon didn't keep it. This replaces "the running stopwatch is never edited" for edits made in the panel (Max asked; details by Claude, v0.7.13).
 - 2026-10-23: The finish form shows in the toolbar panel for panel actions, and in a small pop-up window otherwise. Options: Save (or Save and switch), Keep paused, and Discard (two presses) (Claude, from Max's request; confirm).
 - 2026-10-23: Opening a work item or contact in Karbon while a blank timer runs shows a persistent pop-up, whatever the settings. It has no countdown and stays through page changes until answered: "Finish timer" (or "Finish and switch here" with auto-switch on) or "Keep it running." The item you opened is offered as a one-click pick on the finish form (Max asked for the persistent pop-up; details by Claude).
 - 2026-10-23: At 11:59 PM a blank timer is paused rather than split, and a notification asks to finish it. It still saves to the day it was recorded (Claude; confirm).
@@ -35,6 +37,10 @@ Settled design decisions for how the extension controls the Karbon timer.
 - 2026-10-23: New defaults (Max, v0.7.11): work items auto-start after 1 second; contacts get a reminder after 60 seconds, and wait 5 seconds when set to auto-start; auto-switch is on after 1 second; resume after a lock or idle pause is on; the badge shows everywhere; the toolbar icon suits dark themes. The cancel countdown stays a fixed 5 seconds.
 - 2026-10-23: Auto-switch is set separately for Work and Clients, as two switches. Work is on by default, Clients off. Both share one countdown (Max asked for the split; Clients default by Claude, confirm).
 - 2026-10-23: The new defaults apply to existing users too, for any setting they never changed (Max). Upgrades turn contact auto-switch on only where someone had turned on both auto-switch and contact auto-start, as before (Claude).
+- 2026-10-23: The setup guide (`welcome.html`) is also the full settings, help, and support page, and Chrome's Options menu opens it. It has every setting, in the panel's group order and names, each with what it does, when to change it, its default, and a Reset link when changed (Max asked for one page; layout and copy by Claude, confirm).
+- 2026-10-23: The panel's Preferences keeps only Work, Clients, and Auto-switch, with a link to the page for the rest (Max).
+- 2026-10-23: Once the extension is pinned and connected, the setup steps fold into a one-line "You're set up" note, so returning visitors land on settings (Claude; confirm).
+- 2026-10-23: `DEFAULTS` lives in `src/defaults.js`, and the form logic in `src/prefs.js`, shared by the panel and the page (Claude).
 - 2026-10-23: The privacy policy is linked from the Preferences footer and the setup guide: https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home (Max).
 
 ## Pausing and away time

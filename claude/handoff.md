@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.11 are committed to `main` but not tagged or pushed. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.14 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.14 (settings page, editable timer card, switch button) went in as one commit and haven't run as a loaded extension yet. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
 
 ## Next step
-Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshooting, and read the Connection line: it says whether the background can reach Karbon's API without a tab. Then run one blank start, open a work item, and finish.
+Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start and, in the timer card, set its work item, role, and task type before stopping; each should save, or say plainly that Karbon didn't keep it. Then finish.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -17,13 +17,13 @@ Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshoot
 - First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, moves the v0.7.4 tag to `main` (same source; `main` has the workflow) and pushes it to submit 0.7.4. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
 - Privacy policy: the hosted policy (effective 2026-10-23) predates the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, and Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md`; the policy source is `docs/privacy-policy.md` (waiting on: Max).
 - Tab-free API calls: v0.7.2 checks once whether the background worker can call `{dataCenterUrl}/api/...` with the session cookie and no Karbon tab. The store pipeline's status check doesn't answer this. If it works, the next step is moving reads (state, search, recents) and then actions to the background, with the tab as fallback (waiting on: Max's Connection line).
-- Settings walkthrough: recommendations for a "Your settings, explained" section in the setup guide, after moving `DEFAULTS` into a shared `src/defaults.js`, are in `artifacts/settings-walkthrough-review.md`. Not built (waiting on: Max).
+- Settings and help page: built on 2026-10-23 from `artifacts/settings-page-plan.md` and committed in 0.7.14. The help copy and FAQ answers are Claude's drafts, and the version is now 0.7.14 after parallel sessions; the plan suggested 0.8.0 (waiting on: Max's review).
 - Toolbar icon color: 0.7.5 lets the person pick a dark or light toolbar icon, in setup step 1 and in Preferences. No theme setting; pages keep following the system. 0.7.6 gives the manifest icons a white face and a thin white outline so they show on a dark extensions page. Details in `artifacts/theme-plan.md` (waiting on: Max's review).
 - Work and Clients preferences: 0.7.7 gives contacts their own choice of Auto-start, Remind me, or Do nothing, with new settings `remindContacts` and `contactNudgeSeconds`. Max checked it in Chrome on 2026-10-23. Not tagged, so the scheduled 0.7.4 task isn't affected (waiting on: nothing).
 - Multiple tenants: the bootstrap cookie names the user's default tenant. A Karbon tab's URL still wins for that tab. Not tested with a user who works in several tenants (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
 - Required "None" values: the finish form treats a role or task type named "None" as empty when the firm requires one. Not tested on a firm with `isActorRequired` or `isTaskTypeRequired` on (waiting on: a firm with those settings).
-- Adding a work item to a running blank timer, before stopping, would need the stopwatch `update` call with a new entity. Not captured, so not built (waiting on: Max, if wanted).
+- Editing a running timer: 0.7.13 changes its work item, role, and task type from the timer card with the stopwatch `update` call, which was only captured for notes. Each edit is re-read and reported as failed if Karbon didn't keep it. Tested only against a stubbed panel. Committed in 0.7.14 (waiting on: a live test).
 - Notes visibility: confirm whether time entry notes can reach invoices or client-facing reports, since auto-pause notes will be appended there (waiting on: nothing).
 - Contractor terms: confirm a public extension that drives Karbon's UI does not conflict with the Karbon contractor agreement; collecting user emails and promoting Navica add to this question (waiting on: nothing).
 - Trademark and listing name: check against the Karbon brand guide, which Max has (waiting on: nothing).
@@ -40,6 +40,18 @@ Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshoot
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-23, editable timer card (Claude Code)
+- The running timer card keeps work item (or contact, where the firm allows contact time), role, and task type visible and editable. Missing required fields get a red outline (Max asked).
+- New page command `edit` in `page.js`, using the stopwatch `update` call with a read-back check. The "None counts as empty" check moved to `ui.js` and is shared with the finish form.
+- Recorded the decision in `context/timer-behavior.md`. No privacy review needed: no new permissions, storage keys, or destinations.
+- Tested in the browser pane with stubbed Chrome APIs (`popup-preview` in `.claude/launch.json`, serving a scratchpad copy). Not tested on live Karbon.
+
+### 2026-10-23, settings and help page (Claude Code)
+- `welcome.html` is now one page: setup checklist, every setting with help, how it works, shortcuts, questions, and support. Chrome's Options menu opens it (`options_ui`).
+- The panel's Preferences keeps Work, Clients, and Auto-switch, plus links to the page, feedback, and the privacy policy.
+- New shared `src/defaults.js` and `src/prefs.js`; `background.js`, `content.js`, and `popup.js` no longer keep their own `DEFAULTS`. The panel and page follow each other's changes.
+- Tested in the browser pane with stubbed Chrome APIs: saving, number limits, dimming, Changed tags, Reset, Restore all, panel and page in sync, phone width, light and dark. Not yet loaded as a real extension.
+
 ### 2026-10-23, new defaults and per-kind auto-switch (Claude Code)
 - Max chose new defaults: work auto-start after 1 second, contact reminders on, contact auto-start wait 5 seconds, auto-switch on after 1 second, resume after a pause on, badge everywhere, toolbar icon for dark themes.
 - Auto-switch is now two switches, Work and Clients, with new setting `autoSwitchContacts` (off by default).

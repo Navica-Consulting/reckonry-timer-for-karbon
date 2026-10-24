@@ -1,17 +1,9 @@
-const DEFAULTS = {
-  autoStartWork: true, workStartSeconds: 1, autoStartContacts: false, contactStartSeconds: 5,
-  remindContacts: true, contactNudgeSeconds: 60,
-  autoSwitch: true, autoSwitchContacts: false, switchSeconds: 1, remindNoTimer: false, nudgeSeconds: 60,
-  pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: true,
-  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'everywhere', splitAtMidnight: true,
-  noteLevel: 'auto', debugLog: false, toolbarTheme: 'dark',
-};
 const KARBON = KT_ORIGIN;
-// Interim feedback address until a permanent one is chosen.
-const FEEDBACK_EMAIL = 'max@navicaconsulting.com';
 const ICON = {
   pause: 'M9 6v12M15 6v12',
   play: 'M8 5.5v13l10-6.5z',
+  start: 'M9 6.5v11l9-5.5z',
+  swap: 'M8 3L4 7l4 4M4 7h16M16 13l4 4-4 4M20 17H4',
 };
 
 let current = null;      // timer state
@@ -19,6 +11,8 @@ let here = null;         // the active tab, when it is a Karbon work item: { key
 let timeCfg = null;      // the firm's time settings: { workOnly, notesRequired }
 let tick = null;
 let chosen = null;       // the work item or contact picked in the Work field
+let lists = null;        // role and task type lists: { roles, taskTypes }
+let changingWork = false; // the running timer's work is being changed in the card
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 const level = async () => (await chrome.storage.sync.get({ noteLevel: 'auto' })).noteLevel;
@@ -69,18 +63,9 @@ function render(s) {
   $('pill').className = `pill ${st === 'Started' ? 'running' : st === 'Paused' ? 'paused' : ''}`;
 
   $('timer').hidden = !act;
+  if (!act) $('swapAsk').hidden = true;
   if (act) {
-    // A contact timer has no work item, so the contact's name is the main line.
-    const isWork = !s.linkType || s.linkType === 'WorkItem';
-    const blank = !s.work;
-    $('work').hidden = blank;
-    $('blankWork').hidden = !blank;
-    if (!blank) {
-      $('work').textContent = isWork ? s.title || 'Open work item' : s.client || 'Open contact';
-      if (!isWork && TAGS[s.linkType]) $('work').append(' ', el('span', { class: 'tag' }, TAGS[s.linkType]));
-      $('work').title = isWork ? 'Open this work item in Karbon' : `Open this ${TAGS[s.linkType] || 'contact'} in Karbon`;
-    }
-    $('client').textContent = blank ? 'You will choose a work item when you stop.' : isWork ? s.client || '' : '';
+    renderDetails(s);
     const resumeMode = st === 'Paused';
     $('toggleIcon').setAttribute('d', resumeMode ? ICON.play : ICON.pause);
     $('toggle').setAttribute('aria-label', resumeMode ? 'Resume timer' : 'Pause timer');
@@ -92,6 +77,9 @@ function render(s) {
   $('startHeading').textContent = verb;
   $('go').setAttribute('aria-label', verb);
   $('go').title = verb;
+  // Two opposing arrows read as "swap", so a running timer does not look like a second start.
+  $('go').classList.toggle('swap', !!act);
+  $('goIcon').setAttribute('d', act ? ICON.swap : ICON.start);
 
   clearInterval(tick);
   const draw = () => {
@@ -103,6 +91,38 @@ function render(s) {
   draw();
   if (st === 'Started') tick = setInterval(draw, 1000);
   renderQuick();
+}
+
+// The running timer's work, role, and task type stay visible and editable.
+// Anything Karbon needs before it will save the entry is outlined in red while it's missing.
+function renderDetails(s) {
+  // A contact timer has no work item, so the contact's name is the main line.
+  const isWork = !s.linkType || s.linkType === 'WorkItem';
+  const blank = !s.work;
+  if (blank) changingWork = false;
+  $('curChosen').hidden = blank || changingWork;
+  $('curPicker').hidden = !blank && !changingWork;
+  if (!blank) {
+    $('work').textContent = isWork ? s.title || 'Open work item' : s.client || 'Open contact';
+    if (!isWork && TAGS[s.linkType]) $('work').append(' ', el('span', { class: 'tag' }, TAGS[s.linkType]));
+    $('work').title = isWork ? 'Open this work item in Karbon' : `Open this ${TAGS[s.linkType] || 'contact'} in Karbon`;
+  }
+  $('client').textContent = isWork ? s.client || '' : '';
+  setInvalid($('curQ'), blank);
+
+  const lk = lists || {};
+  fillCurrent($('curRole'), lk.roles || [], s.roleKey, 'role');
+  fillCurrent($('curTask'), lk.taskTypes || [], s.taskTypeKey, 'task type');
+  const cfg = timeCfg || {};
+  $('curRoleReq').hidden = !cfg.roleRequired;
+  $('curTaskReq').hidden = !cfg.taskTypeRequired;
+  setInvalid($('curRole'), !!cfg.roleRequired && emptySel($('curRole')));
+  setInvalid($('curTask'), !!cfg.taskTypeRequired && emptySel($('curTask')));
+}
+
+function setInvalid(field, on) {
+  if (on) field.setAttribute('aria-invalid', 'true');
+  else field.removeAttribute('aria-invalid');
 }
 
 // "This work item" as a one-click pick.
@@ -159,6 +179,46 @@ $('work').addEventListener('click', async () => {
   window.close();
 });
 
+// ---- Editing the running timer ----
+async function editCurrent(args, done) {
+  say('Working.');
+  const r = await send('edit', args);
+  if (!r || !r.ok) sayError(r);
+  else say(done);
+  refresh();
+  return !!(r && r.ok);
+}
+
+$('curRole').addEventListener('change', () => editCurrent({ roleKey: $('curRole').value || null }, 'Role updated.'));
+$('curTask').addEventListener('change', () => editCurrent({ taskTypeKey: $('curTask').value || null }, 'Task type updated.'));
+
+async function setWork(item) {
+  const ok = await editCurrent({ workKey: item.key, linkType: item.linkType || 'WorkItem' }, `Timer is now on ${item.title || 'the item'}.`);
+  if (!ok) return;
+  openDrop(BOX.cur, false);
+  changingWork = false;
+  $('curQ').value = '';
+}
+
+$('curChange').addEventListener('click', () => {
+  changingWork = true;
+  renderDetails(current);
+  $('curQ').focus();
+  loadRecents(false, BOX.cur);
+});
+
+// Escape backs out of changing a work item that is already set.
+$('curQ').addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !current || !current.work) return;
+  e.preventDefault();
+  changingWork = false;
+  renderDetails(current);
+  $('curChange').focus();
+});
+$('curQ').addEventListener('focus', () => {
+  if (!$('curQ').value.trim() && !$('curResults').children.length) loadRecents(false, BOX.cur);
+});
+
 $('noteRow').addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = $('noteText').value.trim();
@@ -175,6 +235,7 @@ function choose(item) {
   $('chosenSub').textContent = item.subtitle || '';
   $('chosen').hidden = false;
   $('picker').hidden = true;
+  openDrop(BOX.start, false);
   say(`${item.title || 'Item'} chosen. Check role and task type, then press play.`);
   $('role').focus();
 }
@@ -188,19 +249,61 @@ function clearChoice() {
 $('change').addEventListener('click', clearChoice);
 
 // Work is optional: with nothing chosen, the timer starts blank and the details are asked for at stop.
+// With a timer running, play first asks whether to save or discard it. Nothing needs to be chosen to switch.
 async function startChosen() {
   const item = chosen;
-  if (isActive(current) && (current.work || null) === (item ? item.key : null)) {
-    return say(item ? 'That item already has the timer.' : 'A timer with no work item is already running.');
-  }
+  if (!isActive(current)) return startNew(item);
+  if (item && current.work === item.key) return say('That item already has the timer.');
+  askSwap(true);
+}
+
+function askSwap(on) {
+  $('swapAsk').hidden = !on;
+  if (on) $('swapSave').focus();
+}
+
+// The fields are read when you answer, so changes made while the question is open count.
+async function startArgs(item) {
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
-  say('Starting. If Karbon is closed, it opens in a background tab first.');
-  const args = {
+  return {
     workKey: item ? item.key : null, linkType: item ? item.linkType || 'WorkItem' : null,
     roleKey: $('role').value || d.roleKey, taskTypeKey: $('taskType').value || d.taskTypeKey,
     description: $('desc').value,
     note: await noteFor('manualStart'),
   };
+}
+
+async function swap(how) {
+  askSwap(false);
+  const item = chosen;
+  if (!isActive(current)) return startNew(item);
+  const args = await startArgs(item);
+  say('Working.');
+  if (how === 'save') {
+    const note = await noteFor('manualStop');
+    const r = await send('stopAndSave', { note, interactive: true });
+    if (!r || !r.ok) return sayError(r);
+    if (r.result && r.result.needsCompletion) {
+      await rememberPicks();
+      return toFinishForm({ note, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
+    }
+    return startNew(item, args, r.result && r.result.saved ? `Saved a ${r.result.minutes} minute entry. ` : '');
+  }
+  const r = await send('discard', {});
+  if (!r || !r.ok) return sayError(r);
+  return startNew(item, args, 'Timer discarded. ');
+}
+
+$('swapSave').addEventListener('click', () => swap('save'));
+$('swapDiscard').addEventListener('click', () => swap('discard'));
+$('swapCancel').addEventListener('click', () => { askSwap(false); say(''); $('go').focus(); });
+$('swapAsk').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); $('swapCancel').click(); }
+});
+
+async function startNew(item, args, lead = '') {
+  args = args || await startArgs(item);
+  say('Starting. If Karbon is closed, it opens in a background tab first.');
   const stopNote = await noteFor('manualStop');
   const r = await send('start', { ...args, stopNote, interactive: true });
   if (!r || !r.ok) return sayError(r);
@@ -208,7 +311,7 @@ async function startChosen() {
   if (r.result && r.result.needsCompletion) {
     return toFinishForm({ note: stopNote, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
   }
-  say(item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.');
+  say(lead + (item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.'));
   $('desc').value = '';
   $('q').value = '';
   chosen = null;
@@ -231,6 +334,8 @@ $('go').addEventListener('click', startChosen);
 async function loadLookups() {
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey', 'lookups']);
   const paint = (lk) => {
+    lists = lk || null;
+    if (isActive(current)) renderDetails(current);
     fillSelect($('role'), (lk && lk.roles) || [], $('role').value || d.roleKey, 'role');
     fillSelect($('taskType'), (lk && lk.taskTypes) || [], $('taskType').value || d.taskTypeKey, 'task type');
   };
@@ -247,111 +352,85 @@ async function loadLookups() {
 }
 
 // ---- Search and recents ----
-let searchSeq = 0;
-function showResults(head, items) {
-  $('resultsHead').textContent = head;
-  $('results').replaceChildren(...items.map((it) => itemRow(it, { onStart: choose })));
+// Two result lists: the start panel's Work field, and the running timer's.
+const BOX = {
+  start: { q: 'q', head: 'resultsHead', list: 'results', combo: 'combo', drop: 'drop', pick: (it) => choose(it), seq: 0, debounce: null },
+  cur: { q: 'curQ', head: 'curResultsHead', list: 'curResults', combo: 'curCombo', drop: 'curDrop', pick: (it) => setWork(it), seq: 0, debounce: null },
+};
+
+// Each list floats under its field while focus is in the field or the list.
+function openDrop(box, on) {
+  $(box.drop).hidden = !on;
+  $(box.q).setAttribute('aria-expanded', String(on));
 }
 
-async function loadRecents(force) {
+function bindDrop(box) {
+  const combo = $(box.combo);
+  combo.addEventListener('focusin', () => openDrop(box, true));
+  combo.addEventListener('focusout', (e) => { if (!combo.contains(e.relatedTarget)) openDrop(box, false); });
+  // Keeps focus in the field on click, so the list doesn't close before the pick lands.
+  $(box.drop).addEventListener('mousedown', (e) => e.preventDefault());
+  combo.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented) return;
+    if (e.key === 'Escape' && !$(box.drop).hidden) { e.preventDefault(); $(box.q).focus(); openDrop(box, false); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const opts = [...$(box.drop).querySelectorAll('button')];
+    if (!opts.length) return;
+    e.preventDefault();
+    openDrop(box, true);
+    const i = opts.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') opts[Math.min(i + 1, opts.length - 1)].focus();
+    else if (i <= 0) $(box.q).focus();
+    else opts[i - 1].focus();
+  });
+}
+
+function showResults(box, head, items) {
+  $(box.head).textContent = head;
+  $(box.list).replaceChildren(...items.map((it) => itemRow(it, { onStart: box.pick })));
+}
+
+async function loadRecents(force, box = BOX.start) {
   const hasTab = await chrome.runtime.sendMessage({ type: 'hasKarbonTab' });
   if (!hasTab && !force) {
-    $('resultsHead').replaceChildren(el('button', { type: 'button', class: 'linklike', onclick: () => loadRecents(true) }, 'Show recent work items'));
-    $('results').replaceChildren();
+    $(box.head).replaceChildren(el('button', { type: 'button', class: 'linklike', onclick: () => loadRecents(true, box) }, 'Show recent work items'));
+    $(box.list).replaceChildren();
     return;
   }
-  $('resultsHead').textContent = 'Loading recent work items.';
+  $(box.head).textContent = 'Loading recent work items.';
   const r = await send('recents', { take: 6 });
-  if (!r || !r.ok) { $('resultsHead').textContent = ''; return sayError(r); }
-  showResults(r.result.length ? 'Recent work items' : 'No recent work items.', r.result);
+  if (!r || !r.ok) { $(box.head).textContent = ''; return sayError(r); }
+  showResults(box, r.result.length ? 'Recent work items' : 'No recent work items.', r.result);
 }
 
-async function runSearch(term) {
-  const mine = ++searchSeq;
-  $('resultsHead').textContent = 'Searching.';
+async function runSearch(term, box) {
+  const mine = ++box.seq;
+  $(box.head).textContent = 'Searching.';
   // One request at a time, so a closed Karbon is only opened once.
   const w = await send('search', { term, kind: 'work', take: 6 });
-  if (mine !== searchSeq) return;
-  if (!w || !w.ok) { $('resultsHead').textContent = ''; return sayError(w); }
+  if (mine !== box.seq) return;
+  if (!w || !w.ok) { $(box.head).textContent = ''; return sayError(w); }
   // Work-only firms cannot book time to contacts, so contacts are left out of results.
   const c = workOnly() ? null : await send('search', { term, kind: 'contact', take: 4 });
-  if (mine !== searchSeq) return;
+  if (mine !== box.seq) return;
   const items = [...w.result, ...((c && c.ok && c.result) || [])];
-  showResults(items.length ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'No matches.', items);
+  showResults(box, items.length ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'No matches.', items);
 }
 
-let debounce = null;
-$('q').addEventListener('input', () => {
-  clearTimeout(debounce);
-  const term = $('q').value.trim();
-  if (term.length < 2) { searchSeq++; debounce = setTimeout(() => loadRecents(false), 200); return; }
-  debounce = setTimeout(() => runSearch(term), 350);
-});
+for (const box of Object.values(BOX)) {
+  bindDrop(box);
+  $(box.q).addEventListener('input', () => {
+    openDrop(box, true);
+    clearTimeout(box.debounce);
+    const term = $(box.q).value.trim();
+    if (term.length < 2) { box.seq++; box.debounce = setTimeout(() => loadRecents(false, box), 200); return; }
+    box.debounce = setTimeout(() => runSearch(term, box), 350);
+  });
+}
 
 // ---- Preferences ----
-// Each "no timer running" choice is one radio group stored as two switches: auto-start and remind.
-const MODES = {
-  startMode: ['autoStartWork', 'remindNoTimer'],
-  contactMode: ['autoStartContacts', 'remindContacts'],
-};
-const modeOf = (s, name) => { const [a, r] = MODES[name]; return s[a] ? 'auto' : s[r] ? 'nudge' : 'none'; };
-
-(async () => {
-  const s = await chrome.storage.sync.get(DEFAULTS);
-  const form = $('prefs');
-  for (const f of form.elements) {
-    if (f.name in MODES) { f.checked = f.value === modeOf(s, f.name); continue; }
-    if (!(f.name in s)) continue;
-    if (f.type === 'radio') f.checked = f.value === s[f.name];
-    else if (f.type === 'checkbox') f.checked = !!s[f.name];
-    else f.value = s[f.name];
-  }
-  form.addEventListener('change', (e) => {
-    const f = e.target;
-    let v;
-    if (f.name in MODES) {
-      const [a, r] = MODES[f.name];
-      chrome.storage.sync.set({ [a]: f.value === 'auto', [r]: f.value === 'nudge' });
-    } else {
-      if (f.type === 'checkbox') v = f.checked;
-      else if (f.type === 'number') v = Math.max(Number(f.min) || 0, Number.isFinite(Number(f.value)) && f.value !== '' ? Number(f.value) : DEFAULTS[f.name]);
-      else v = f.value;
-      chrome.storage.sync.set({ [f.name]: v });
-    }
-    say('Preference saved.');
-    updateDeps();
-  });
-  updateDeps();
-})();
-
-// Dim and disable settings that only matter when another one is on.
-function updateDeps() {
-  const f = $('prefs').elements;
-  const on = {
-    modeAuto: f.startMode.value === 'auto',
-    modeNudge: f.startMode.value === 'nudge',
-    contactAuto: f.contactMode.value === 'auto',
-    contactNudge: f.contactMode.value === 'nudge',
-    autoSwitch: f.autoSwitch.checked || f.autoSwitchContacts.checked,
-    idlePause: f.idlePause.checked,
-    anyPause: f.pauseOnLock.checked || f.idlePause.checked,
-    longTimer: f.longTimerAlert.checked,
-    badge: f.badgeWhere.value !== 'never',
-  };
-  // A nested row is live only when its own condition and every enclosing area's condition are on.
-  for (const row of document.querySelectorAll('#prefs [data-when]')) {
-    let live = true;
-    for (let n = row; n && n.id !== 'prefs'; n = n.parentElement) {
-      if (n.dataset && n.dataset.when && !on[n.dataset.when]) live = false;
-    }
-    row.classList.toggle('off', !live);
-    for (const input of row.querySelectorAll('input, select')) {
-      // Leave inputs to their own row when that row has a condition of its own.
-      const owner = input.closest('[data-when]');
-      if (owner === row) input.disabled = !live;
-    }
-  }
-}
+// The panel keeps Work, Clients, and Auto-switch; everything else is on the settings page.
+bindPrefs($('prefs'), (keys, s, local) => { if (local) say('Preference saved.'); });
 
 // Opening Preferences scrolls it to the top of the panel, so it's clear something happened.
 $('prefsBox').addEventListener('toggle', () => {
@@ -360,31 +439,8 @@ $('prefsBox').addEventListener('toggle', () => {
   $('prefsBox').scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
 });
 
-// chrome:// pages can't be opened from a plain link in an extension, only through the tabs API.
-$('shortcuts').addEventListener('click', () => { chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); window.close(); });
-
-$('guide').addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html' }); window.close(); });
-
-// Feedback: a prefilled email with the version and on/off settings only, never client or work data.
-$('feedback').addEventListener('click', async () => {
-  const s = await chrome.storage.sync.get(DEFAULTS);
-  const v = chrome.runtime.getManifest().version;
-  const chromeVer = (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || 'unknown';
-  const on = Object.entries(s).filter(([, x]) => x === true).map(([k]) => k).join(', ') || 'none';
-  const body = [
-    'What happened, or what would you like to see?', '', '', '',
-    '---',
-    `Version: ${v}`, `Chrome: ${chromeVer}`,
-    `No timer, work items: ${modeOf(s, 'startMode')} (start ${s.workStartSeconds}s, remind ${s.nudgeSeconds}s)`,
-    `No timer, contacts: ${modeOf(s, 'contactMode')} (start ${s.contactStartSeconds}s, remind ${s.contactNudgeSeconds}s)`,
-    `Auto-switch: work ${s.autoSwitch ? 'on' : 'off'}, contacts ${s.autoSwitchContacts ? 'on' : 'off'} (${s.switchSeconds}s)`, `Long-timer alert: ${s.longTimerAlert ? `${s.longTimerHours}h` : 'off'}`,
-    `Badge: ${s.badgeWhere}`, `Notes level: ${s.noteLevel}`,
-    `Settings on: ${on}`, `Work items only: ${workOnly() ? 'yes' : 'no'}`,
-  ].join('\n');
-  const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(`Reckonry Timer for Karbon feedback (v${v})`)}&body=${encodeURIComponent(body)}`;
-  chrome.tabs.create({ url });
-  window.close();
-});
+$('guide').addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#settings' }); window.close(); });
+$('feedback').addEventListener('click', async () => { await openFeedback(); window.close(); });
 
 // ---- Start ----
 (async () => {
@@ -399,24 +455,12 @@ $('feedback').addEventListener('click', async () => {
   ({ timeCfg = null } = await chrome.storage.local.get('timeCfg'));
   if (workOnly()) {
     $('q').placeholder = 'Search work items';
+    $('curQ').placeholder = 'Search work items';
+    $('curWorkLabel').textContent = 'Work';
   }
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
-  updateDeps();
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
   loadRecents(false);
   loadLookups();
 })();
-
-// ---- Troubleshooting: can the background reach Karbon without a tab? ----
-async function showConnCheck() {
-  const el = $('connCheck');
-  if (!el) return;
-  const k = await chrome.storage.local.get(['signedIn', 'directApi', 'firmName', 'cookieNote', 'keySource']);
-  const d = k.directApi;
-  if (k.signedIn === false) el.textContent = `Connection: not signed in to Karbon in this browser${k.cookieNote ? ` (${k.cookieNote})` : ''}.`;
-  else if (!d) el.textContent = 'Connection: not checked yet.';
-  else if (d.ok) el.textContent = `Connection: works without a Karbon tab${k.firmName ? ` (${k.firmName})` : ''}.${k.keySource === 'tab' ? ` Account read from a Karbon tab${k.cookieNote ? `; cookie: ${k.cookieNote}` : ''}.` : ''}`;
-  else el.textContent = `Connection: needs a Karbon tab (status ${d.status || 'none'}${d.error ? `, ${d.error}` : ''}).`;
-}
-showConnCheck();

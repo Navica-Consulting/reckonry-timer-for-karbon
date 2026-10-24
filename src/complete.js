@@ -11,8 +11,6 @@ let chosen = null;   // the work item or contact picked here
 let discardArmed = false;
 
 const NOUN = { work: 'a work item or contact', role: 'a role', taskType: 'a task type', notes: 'a note' };
-// A "None" choice doesn't count when the firm requires a role or task type; its ID varies by list.
-const emptySel = (sel) => !sel.value || sel.value === 'NONE' || ((sel.selectedOptions[0] || {}).textContent || '').trim() === 'None';
 const workOnly = () => !!(cfg && cfg.workOnly);
 
 function say(text) { $('msg').textContent = text; }

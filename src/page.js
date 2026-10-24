@@ -278,6 +278,27 @@
     return putAction('update', { description: joinNote(cur.description, text) });
   }
 
+  // Changes the running timer's work item, contact, role, or task type. Only the keys passed change.
+  // Uses the same update call as notes; it isn't captured for these fields, so the result is checked.
+  async function edit({ workKey, linkType = 'WorkItem', roleKey, taskTypeKey }) {
+    const cur = await getState();
+    if (cur.stopwatchState === 'Stopped') throw new Error('No timer is running, so there is nothing to change.');
+    const o = {};
+    if (workKey !== undefined) {
+      if (workKey && linkType !== 'WorkItem') {
+        const cfg = await timeSettings().catch(() => null);
+        if (cfg && cfg.workOnly) throw new Error('Your firm books time to work items only.');
+      }
+      Object.assign(o, { entityPermaKey: workKey || null, entityLinkType: workKey ? linkType : null, workItemTitle: null, clientName: null });
+    }
+    if (roleKey !== undefined) Object.assign(o, { actorPermaKey: roleKey || null, actorName: null });
+    if (taskTypeKey !== undefined) Object.assign(o, { taskTypePermaKey: taskTypeKey || null, taskTypeName: null });
+    const after = await putAction('update', o);
+    const kept = ['entityPermaKey', 'actorPermaKey', 'taskTypePermaKey'].every((k) => !(k in o) || realKey(after[k]) === realKey(o[k]));
+    if (!kept) throw new Error('Karbon did not keep the change. Try it in Karbon, or set it when you stop.');
+    return after;
+  }
+
   // Used by lock, idle, sleep, and day-end handling: never errors when there is nothing to do.
   async function autoPause({ note }) {
     const cur = await getState();
@@ -414,7 +435,7 @@
   };
 
   const COMMANDS = {
-    getState, start, pause, resume, appendNote, autoPause, autoResume, stopAndSave, discard,
+    getState, start, pause, resume, appendNote, edit, autoPause, autoResume, stopAndSave, discard,
     search, recents, lookups, timeSettings, setDebug, setKeys,
   };
 

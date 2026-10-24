@@ -1,15 +1,7 @@
 // Service worker: badge, settings, lock and idle pause, sleep gaps, day-end split, long-timer alert,
 // shortcuts, and routing commands to a Karbon tab (opened in the background only when an action needs one).
-importScripts('config.js', 'notes.js');
+importScripts('config.js', 'defaults.js', 'notes.js');
 
-const DEFAULTS = {
-  autoStartWork: true, workStartSeconds: 1, autoStartContacts: false, contactStartSeconds: 5,
-  remindContacts: true, contactNudgeSeconds: 60,
-  autoSwitch: true, autoSwitchContacts: false, switchSeconds: 1, remindNoTimer: false, nudgeSeconds: 60,
-  pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: true,
-  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'everywhere', splitAtMidnight: true,
-  noteLevel: 'auto', debugLog: false, toolbarTheme: 'dark',
-};
 const KARBON = KT_ORIGIN;
 const HEARTBEAT_MIN = 1;
 const SLEEP_GAP_MS = 3 * 60 * 1000;
@@ -149,7 +141,7 @@ async function openBackgroundTabOnce() {
 }
 
 // Actions may open Karbon in the background; reads never do.
-const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'autoPause', 'autoResume', 'search', 'recents']);
+const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume', 'search', 'recents']);
 
 // Error codes let the popup offer the right fix: NO_TAB opens Karbon, NOT_READY reloads it.
 async function toKarbon(cmd, args) {

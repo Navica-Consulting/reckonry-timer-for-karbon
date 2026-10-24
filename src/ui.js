@@ -34,3 +34,16 @@ function fillSelect(sel, list, selectedKey, noun) {
   const fallback = opts.find((o) => o.isDefault) || opts[0];
   sel.value = selectedKey && opts.some((o) => o.key === selectedKey) ? selectedKey : fallback.key;
 }
+
+// A "None" choice doesn't count when the firm requires a role or task type; its ID varies by list.
+const emptySel = (sel) => !sel.value || sel.value === 'NONE' || ((sel.selectedOptions[0] || {}).textContent || '').trim() === 'None';
+
+// Shows a running timer's own role or task type. With none set it shows None, never the list default.
+function fillCurrent(sel, list, key, noun) {
+  const opts = list.slice();
+  const none = opts.find((o) => o.key === 'NONE' || o.name === 'None');
+  if (!none) opts.unshift({ key: '', name: 'None' });
+  if (key && !opts.some((o) => o.key === key)) opts.unshift({ key, name: `Current ${noun}` });
+  sel.replaceChildren(...opts.map((o) => el('option', { value: o.key }, o.name)));
+  sel.value = key || (none ? none.key : '');
+}

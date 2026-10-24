@@ -35,6 +35,9 @@ input[type=text], input[type=search], textarea, select {
   font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; width:100%; }
 textarea { resize:vertical; min-height:2.4em; }
 #noteRow { margin-top:10px; }
+/* Role and task type side by side in the timer card, to keep the panel short. */
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pair select { min-width:0; }
 
 /* Item lists */
 ul.items { list-style:none; margin:0; padding:0; }
@@ -55,12 +58,19 @@ ul.items li:hover { background:var(--soft); }
 details { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
 /* Start panel, laid out like Karbon's Start Timer */
 .start { margin-top:12px; }
-#timer:not([hidden]) + .start { border-top:1px solid var(--line); padding-top:12px; }
 .panel-title { font-size:15px; margin:0; color:var(--fg); text-transform:none; letter-spacing:0; }
 .play { width:38px; height:38px; border-radius:50%; border:0; background:var(--accent); color:var(--on-accent); display:grid; place-items:center; cursor:pointer; flex:none; }
 .play svg { width:22px; height:22px; fill:currentColor; }
 .play:hover { filter:brightness(1.1); }
 label.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+/* Work search: recents and results float under the field while it has focus. */
+.combo { position:relative; }
+.drop { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:10; background:var(--bg); border:1px solid var(--line);
+        border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.18); padding:4px; max-height:240px; overflow:auto; }
+.drop:has(> div:empty + ul:empty) { display:none; }
+.drop > div { padding:2px 8px; font-size:12px; }
+.drop > div:empty { display:none; }
+.drop .item:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
 .chosen { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
 .chosen .t { display:block; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chosen .s { display:block; color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -103,7 +113,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .req { color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0; }
 .err { color:#b42318; font-size:13px; margin:4px 0 0; }
 @media (prefers-color-scheme: dark) { .err { color:#ff8a80; } }
-[aria-invalid="true"] { border-color:#b42318 !important; }
+/* Missing and required: a red outline, thick enough to read on either theme. */
+[aria-invalid="true"] { border-color:#b42318 !important; box-shadow:0 0 0 1px #b42318; }
+@media (prefers-color-scheme: dark) { [aria-invalid="true"] { border-color:#ff8a80 !important; box-shadow:0 0 0 1px #ff8a80; } }
 .btn { font:inherit; font-weight:600; border-radius:8px; padding:8px 14px; cursor:pointer; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
 .btn.primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
 .btn.danger { color:#b42318; }
@@ -112,7 +124,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .banner { background:var(--soft); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
 .banner p { margin:0; }
 .banner p + p { margin-top:4px; }
-.blank-work { margin-top:2px; font-weight:600; color:var(--muted); }
 
 /* Preference groups: radio choices, and settings that depend on the row above */
 fieldset.group { border:0; margin:10px 0 0; min-width:0; }
@@ -135,3 +146,9 @@ input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:v
 .swatch img { width:18px; height:18px; }
 .swatch.on-light { background:#f1f3f4; }
 .swatch.on-dark { background:#35363a; }
+/* A required field that is still empty bounces when Swap or Stop needs it. */
+@keyframes bounce { 0%, 100% { transform:translateY(0); } 30% { transform:translateY(-5px); } 60% { transform:translateY(2px); } }
+.bounce { animation:bounce .35s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .bounce { animation:none; } }
+.icon.danger { color:#b42318; }
+@media (prefers-color-scheme: dark) { .icon.danger { color:#ff8a80; } }

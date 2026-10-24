@@ -15,19 +15,53 @@
   <!-- Current timer -->
   <section id="timer" aria-label="Current timer" hidden>
     <div class="row">
-      <div class="grow">
-        <div id="elapsed" aria-hidden="true"></div>
-        <button id="work" type="button" title="Open this work item in Karbon"></button>
-        <div id="blankWork" class="blank-work" hidden>No work item yet</div>
-        <div id="client"></div>
-      </div>
+      <div id="elapsed" class="grow" aria-hidden="true"></div>
       <button id="toggle" class="icon" type="button" aria-label="Pause timer" title="Pause timer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path id="toggleIcon" d="M9 6v12M15 6v12"/></svg>
       </button>
       <button id="stop" class="icon" type="button" aria-label="Stop and save time entry" title="Stop and save time entry">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>
       </button>
+      <!-- Swap saves this timer and starts a blank one. Discard throws it away (two presses); play then starts a new one. -->
+      <button id="swap" class="icon" type="button" aria-label="Save and start a new timer" title="Save and start a new timer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3L4 7l4 4M4 7h16M16 13l4 4-4 4M20 17H4"/></svg>
+      </button>
+      <button id="discard" class="icon danger" type="button" aria-label="Discard timer" title="Discard timer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg>
+      </button>
     </div>
+
+    <!-- The running timer's details, editable. Missing required ones are outlined in red. -->
+    <label for="curQ" class="field">
+      <span id="curWorkLabel">Work or contact</span> <span id="curWorkReq" class="req">(required)</span>
+    </label>
+    <div id="curChosen" class="chosen">
+      <div class="grow">
+        <button id="work" type="button" title="Open this work item in Karbon"></button>
+        <span id="client" class="s"></span>
+      </div>
+      <button id="curChange" type="button" class="linklike">Change</button>
+    </div>
+    <div id="curPicker" hidden>
+      <div id="curCombo" class="combo">
+        <input id="curQ" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="curResults" aria-required="true" aria-expanded="false">
+        <div id="curDrop" class="drop" hidden>
+          <div id="curResultsHead" class="muted"></div>
+          <ul class="items" id="curResults" aria-live="polite"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="pair">
+      <div>
+        <label for="curRole" class="field">Role <span id="curRoleReq" class="req" hidden>(required)</span></label>
+        <select id="curRole"></select>
+      </div>
+      <div>
+        <label for="curTask" class="field">Task type <span id="curTaskReq" class="req" hidden>(required)</span></label>
+        <select id="curTask"></select>
+      </div>
+    </div>
+
     <form id="noteRow" class="row">
       <label for="noteText" class="grow" style="margin:0">
         <input id="noteText" type="text" placeholder="Add a note to this timer" autocomplete="off">
@@ -38,12 +72,12 @@
     </form>
   </section>
 
-  <!-- Start or switch: same field order as Karbon's own timer (Work, Role, Task type, Notes) -->
+  <!-- Start, shown only with no timer running: same field order as Karbon's own timer (Work, Role, Task type, Notes) -->
   <section id="startBox" class="start" aria-labelledby="startHeading">
     <div class="row">
       <h2 id="startHeading" class="grow panel-title">Start timer</h2>
       <button id="go" class="play" type="button" aria-label="Start timer" title="Start timer">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5v11l9-5.5z"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="goIcon" d="M9 6.5v11l9-5.5z"/></svg>
       </button>
     </div>
 
@@ -53,11 +87,15 @@
       <button id="change" type="button" class="linklike">Change</button>
     </div>
     <div id="picker">
-      <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="qHint">
+      <div id="combo" class="combo">
+        <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="qHint" aria-expanded="false">
+        <div id="drop" class="drop" hidden>
+          <div id="resultsHead" class="muted"></div>
+          <ul class="items" id="results" aria-live="polite"></ul>
+        </div>
+      </div>
       <p id="qHint" class="muted" style="margin:4px 0 0">Leave blank to choose it when you stop.</p>
       <ul class="items" id="quickList"></ul>
-      <div id="resultsHead" class="muted" style="margin-top:6px"></div>
-      <ul class="items" id="results" aria-live="polite"></ul>
     </div>
 
     <label for="role" class="field">Role</label>
@@ -157,100 +195,12 @@
         <p class="sub-note">A timer with no work item never switches on its own. A pop-up asks you to finish it first.</p>
       </section>
 
-      <section class="group" aria-labelledby="gAway">
-        <h3 id="gAway">Away from the computer</h3>
-        <label class="opt">
-          <span class="txt">Pause when my screen locks</span>
-          <input type="checkbox" class="switch" role="switch" name="pauseOnLock">
-        </label>
-        <label class="opt">
-          <span class="txt">Pause when I'm idle</span>
-          <input type="checkbox" class="switch" role="switch" name="idlePause">
-        </label>
-        <div class="nest" data-when="idlePause">
-          <label class="opt">
-            <span class="txt">Idle for</span>
-            <span class="num"><input type="number" name="idleMinutes" min="1" max="120" aria-label="Idle minutes before pausing"> min</span>
-          </label>
-        </div>
-        <label class="opt" data-when="anyPause">
-          <span class="txt">Resume when I come back<span class="sub">After a lock or idle pause</span></span>
-          <input type="checkbox" class="switch" role="switch" name="autoResume">
-        </label>
-      </section>
-
-      <section class="group" aria-labelledby="gAlerts">
-        <h3 id="gAlerts">Alerts and badge</h3>
-        <label class="opt">
-          <span class="txt">Long-timer alert<span class="sub">A notification, and the badge turns yellow</span></span>
-          <input type="checkbox" class="switch" role="switch" name="longTimerAlert">
-        </label>
-        <div class="nest" data-when="longTimer">
-          <label class="opt">
-            <span class="txt">Alert after</span>
-            <span class="num"><input type="number" name="longTimerHours" min="0.5" max="24" step="0.5" aria-label="Hours before a long-timer alert"> hr</span>
-          </label>
-        </div>
-        <div class="opt stack">
-          <label for="badgeWhere" class="txt">Show the timer badge</label>
-          <select id="badgeWhere" name="badgeWhere">
-            <option value="everywhere">Everywhere</option>
-            <option value="away">Away from Karbon</option>
-            <option value="never">Never</option>
-          </select>
-        </div>
-        <div class="nest" data-when="badge">
-          <label class="opt">
-            <span class="txt">Red badge when no timer is running</span>
-            <input type="checkbox" class="switch" role="switch" name="showIdleBadge">
-          </label>
-        </div>
-      </section>
-
-      <section class="group" aria-labelledby="gEntries">
-        <h3 id="gEntries">Time entries</h3>
-        <label class="opt">
-          <span class="txt">Split timers at midnight<span class="sub">So time lands on the right day</span></span>
-          <input type="checkbox" class="switch" role="switch" name="splitAtMidnight">
-        </label>
-        <div class="opt stack">
-          <label for="noteLevel" class="txt">Notes on time entries</label>
-          <select id="noteLevel" name="noteLevel">
-            <option value="off">Off</option>
-            <option value="auto">Automatic actions only</option>
-            <option value="all">All actions, including my clicks here</option>
-          </select>
-        </div>
-      </section>
-
-      <fieldset class="group">
-        <legend><h3>Toolbar icon</h3></legend>
-        <label class="opt radio">
-          <span class="txt">For light themes</span>
-          <input type="radio" name="toolbarTheme" value="light">
-          <span class="swatch on-light"><img src="icons/icon32.png" alt=""></span>
-        </label>
-        <label class="opt radio">
-          <span class="txt">For dark themes</span>
-          <input type="radio" name="toolbarTheme" value="dark">
-          <span class="swatch on-dark"><img src="icons/icon32-light.png" alt=""></span>
-        </label>
-      </fieldset>
-
-      <section class="group" aria-labelledby="gLog">
-        <h3 id="gLog">Troubleshooting</h3>
-        <label class="opt">
-          <span class="txt">Diagnostic logging<span class="sub">In the browser console</span></span>
-          <input type="checkbox" class="switch" role="switch" name="debugLog">
-        </label>
-        <p id="connCheck" class="sub-note" aria-live="polite"></p>
-      </section>
     </form>
 
     <div class="prefs-foot">
-      <p><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> starts, pauses, or resumes. <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> opens this panel. <button id="shortcuts" type="button" class="linklike">Change shortcuts</button></p>
+      <p>Pausing, alerts, notes, the toolbar icon, and shortcuts are on the settings page, with help for every setting.</p>
       <div class="links">
-        <button id="guide" type="button" class="linklike">Setup guide</button>
+        <button id="guide" type="button" class="linklike">All settings and help</button>
         <button id="feedback" type="button" class="linklike">Send feedback</button>
         <a href="https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home" target="_blank" rel="noopener" class="linklike">Privacy policy</a>
       </div>
@@ -258,6 +208,8 @@
   </details>
 </main>
 <script src="config.js"></script>
+<script src="defaults.js"></script>
+<script src="prefs.js"></script>
 <script src="notes.js"></script>
 <script src="ui.js"></script>
 <script src="popup.js"></script>
