@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.16 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.16 (settings page, editable timer card, one form at a time with Swap and Discard) haven't run as a loaded extension yet. Commit `310c9e3` is titled 0.7.15 but holds 0.7.16. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.16 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.16 haven't run as a loaded extension yet: the settings page, editable timer card, and switch button (0.7.14); one form at a time and editable notes on the card (0.7.15); and the red discard confirmation (0.7.16). Commit `310c9e3` is labeled 0.7.15 but already carries the 0.7.16 manifest. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
 
 ## Next step
-Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start and, in the timer card, set its work item, role, and task type before stopping; each should save, or say plainly that Karbon didn't keep it. Press Swap with a field empty (it should bounce), then with all filled (it should save and start a blank timer). Discard it with two presses, then finish.
+Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start. With the timer running, the panel should show only the timer card. In the card, set its work item, role, task type, and notes; each should save, or say plainly that Karbon didn't keep it. Try Swap, then Discard: the first Discard press should turn the button red, and the second should discard. Then finish.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
