@@ -35,7 +35,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.31)
+## Data inventory (as of 0.7.32)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -110,7 +110,7 @@ the email draft, and Copy details for support, where the user can read, edit, or
 sending. No new permissions, host access, or network calls. The policy's Feedback section now says
 recent errors are included.
 
-Role and task type prefill review (2026-10-24, 0.7.31): starts now fill in the role and task type
+Role and task type prefill review (2026-10-24, 0.7.32): starts now fill in the role and task type
 the way Karbon's own timer does, following the firm's prefill mode. One new `storage.local` key,
 `workPicks`, keeps the role and task type keys of the last entry the extension saved on each work
 item, with the time. Entries older than 100 days drop out, it holds at most 300 work items, and it
@@ -150,4 +150,4 @@ Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover y
 |---|---|---|
 | 2026-10-23 | 0.7.1 | First published policy. |
 | 2026-10-24 | 0.7.30 | Feedback opens a Google Form with recent errors. Moved to timer.reckonry.ai/privacy. |
-| 2026-10-24 | 0.7.31 | Names the per-work-item role and task type memory used for prefill. |
+| 2026-10-24 | 0.7.32 | Names the per-work-item role and task type memory used for prefill. |

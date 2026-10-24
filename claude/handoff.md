@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. 0.7.30 is on `origin/main` and is the release candidate. It carries everything through the separate Client and Work fields (0.7.28), the GitHub Pages policy move (0.7.29), and the error log (0.7.30). Max tested it locally. Version 0.6.1 is in Chrome Web Store review. A scheduled task tags `v0.7.30` and submits it once 0.6.1 clears. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
+Build stage. 0.7.31 is on `origin/main` and is the release candidate. It carries everything through the separate Client and Work fields (0.7.28), the GitHub Pages policy move (0.7.29), the error log (0.7.30), and a stale content script fix (0.7.31). Max tested 0.7.31 locally. Version 0.6.1 is in Chrome Web Store review. A scheduled task tags `v0.7.31` and submits it once 0.6.1 clears. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
 
 ## Next step
-Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7.30) to report that 0.6.1 cleared and 0.7.30 was submitted. Check the tag's Release and Privacy page runs under Actions. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
+Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7.31) to report that 0.6.1 cleared and 0.7.31 was submitted. Check the tag's Release and Privacy page runs under Actions. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -15,7 +15,7 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 
 ## Open threads
 - Signed out of Karbon: 0.7.19 hides the timer when Karbon is signed out and offers a Sign in button that opens Karbon's sign-in page. 0.7.21 removed the page warning and the automatic opens (Max). It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured. Tested only with stubbed Chrome APIs (waiting on: a live sign-out test).
-- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, tags the 0.7.30 commit as `v0.7.30` and pushes the tag, which submits 0.7.30 and republishes the policy. It no longer sends 0.7.4. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
+- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, tags the 0.7.31 commit as `v0.7.31` and pushes the tag, which submits 0.7.31 and republishes the policy. It no longer sends 0.7.4 or 0.7.30. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
 - Privacy policy: hosted on GitHub Pages at https://timer.reckonry.ai/privacy since 0.7.29, published from `docs/privacy-policy.md` on every version tag. The store listing points there. Effective 2026-10-24, with the feedback form and error log. It still doesn't cover the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, or Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md` (waiting on: Max).
 - Tab-free API calls: 0.7.18 runs every command from the background worker through `src/karbon.js`, shared with `page.js`. A Karbon tab is used only when Karbon can't be reached directly, and then an action reloads the tab or opens one. Max confirmed on 2026-10-24 that play works with Karbon closed and the Connection line reports tab-free timer changes. Search, recents, pause, stop, and the lock and day-end paths haven't been tried live without a tab (waiting on: Max's use).
 - Settings and help page: built on 2026-10-23 from `artifacts/settings-page-plan.md` and committed in 0.7.14. The help copy and FAQ answers are Claude's drafts, and the version is now 0.7.14 after parallel sessions; the plan suggested 0.8.0 (waiting on: Max's review).
@@ -32,9 +32,9 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it; Microsoft publisher verification would be needed first (waiting on: Max).
 - Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review. Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
 - Client and Work fields: 0.7.28 scopes Work to the chosen client by matching the client's name, since Karbon gives a work item's client by name only. It filters up to 25 results, so a common search term can miss some of that client's work, and a client group's work may not match. Capturing the call behind a client's Work tab in Karbon would make it exact. A client filled in from a work item gets its key by an exact name search (waiting on: a capture session).
-- Role and task type prefill: 0.7.31 fills them in the way Karbon's timer does, by the firm's prefill mode: last entry on the work item (the extension's own `workPicks` memory), then the work item's budget line (`estimateActualInfos`), then last used. Logic tested against a stubbed Karbon; the budget call confirmed live, read-only. The extension still learns "last used" from any running timer, so a budget prefill can become last used, which Karbon's own Last selected wouldn't do. Not loaded in Chrome yet (waiting on: Max's test).
+- Role and task type prefill: 0.7.32 fills them in the way Karbon's timer does, by the firm's prefill mode: last entry on the work item (the extension's own `workPicks` memory), then the work item's budget line (`estimateActualInfos`), then last used. Logic tested against a stubbed Karbon; the budget call confirmed live, read-only. The extension still learns "last used" from any running timer, so a budget prefill can become last used, which Karbon's own Last selected wouldn't do. Not loaded in Chrome yet (waiting on: Max's test).
 - Feedback form: Send feedback opens a Google Form, committed in 0.7.30 and tested by Max locally. Confirm in the form's own settings that "Restrict to users in Navica LLC" is off and the "Pease add more details" typo is fixed, and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
-- Error log and stale content scripts: 0.7.26 keeps the last 15 extension errors in `storage.local` (`errorLog`, in `src/errors.js`) and adds them to the feedback form's Logs field, the email draft, and Copy details. `content.js` now stops quietly after the extension reloads, instead of throwing "Extension context invalidated". Committed as 0.7.30 together with the feedback-form and finish-form changes that shared the working tree. Max tested it locally (waiting on: nothing).
+- Error log and stale content scripts: 0.7.26 keeps the last 15 extension errors in `storage.local` (`errorLog`, in `src/errors.js`) and adds them to the feedback form's Logs field, the email draft, and Copy details. `content.js` now stops quietly after the extension reloads, instead of throwing "Extension context invalidated". Committed as 0.7.30 together with the feedback-form and finish-form changes that shared the working tree. Max tested it locally. 0.7.31 also cancels pending start, switch, and reminder waits when it stops Max tested 0.7.31 locally (waiting on: nothing).
 
 ## Decisions
 - Timer behavior and Preferences decisions are in `context/timer-behavior.md`.
@@ -45,13 +45,19 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 - 2026-10-24: Host the privacy policy on GitHub Pages at timer.reckonry.ai/privacy, republished on each version tag. The old Google Site links to it for older versions (Max).
 - 2026-10-24: Skip 0.7.4. The first update after 0.6.1 is 0.7.30 (Max).
+- 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
 ### 2026-10-24, role and task type prefill (Claude Code)
 - Max asked to find the call behind Karbon's timer prefill. It's Karbon's own logic, read from its app code, with one server call. Details in `artifacts/capture-summary.md` under Prefill.
 - `prefill` command in `src/karbon.js`; `start` uses it when no role or task type is given. The background adds the per-work memory, last used, and list keys (`withPrefill`), and records each saved work item's role and task type (`onSaved`, relayed from Karbon tabs too).
 - The start form, timer card, and finish form apply a work item's own role and task type when you pick it. The page, shortcut, and Swap starts prefill in the background.
-- Privacy review in `docs/PRIVACY.md`; the policy names the new memory. Built as 0.7.31. Not committed.
+- Privacy review in `docs/PRIVACY.md`; the policy names the new memory. Built as 0.7.32, since main took 0.7.31. Merged into local `main` for testing, not pushed.
+
+### 2026-10-24, stale content script waits and 0.7.31 (Claude Code)
+- Max reported "Extension context invalidated" at `content.js:153`. That line is the route loop's `chrome.storage.sync.get` in 0.7.29, so it came from an old script left in a tab, which 0.7.30 already handles.
+- 0.7.30 still let pending waits (settle, auto-start, auto-switch, reminder) fire after it stopped. 0.7.31 clears them when it stops, and each wait checks `chrome.runtime.id` before acting.
+- Max made 0.7.31 the store candidate. Pushed to `origin/main`, not tagged, and pointed the scheduled task at `v0.7.31`. Max then tested 0.7.31 locally.
 
 ### 2026-10-24, privacy policy on GitHub Pages and 0.7.30 (Claude Code)
 - Max asked to host the policy on GitHub Pages with the domain `timer.reckonry.ai/privacy`. Pages is on, public, with the domain verified and HTTPS enforced. Max set the Cloudflare DNS, verified the domain, and changed the store URL.

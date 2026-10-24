@@ -1,0 +1,69 @@
+/* Store screenshot frame: 1280x800, copy on the left, a browser window on the right. */
+:root { color-scheme: light dark;
+  --bg1:#18356b; --bg2:#2e5aac; --ink:#fff; --ink2:rgba(255,255,255,.82);
+  --win:#fff; --chrome:#e9ecf1; --bar:#fff; --addr:#eef1f5; --addr-ink:#5f6b7a; --tool:#5f6b7a;
+  --page:#f5f6f8; --side:#eef1f5; --card:#fff; --line:#e3e7ec; --fg:#1f2933; --muted:#5f6b7a; --skel:#e6e9ee; --accent:#2e5aac; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg1:#0d1726; --bg2:#1d3a73;
+    --win:#1b1f24; --chrome:#111418; --bar:#22272e; --addr:#14171b; --addr-ink:#9aa5b1; --tool:#9aa5b1;
+    --page:#14171b; --side:#181c21; --card:#1b1f24; --line:#323a43; --fg:#e8ecf1; --muted:#9aa5b1; --skel:#2a3038; --accent:#7cb0ff; }
+}
+* { box-sizing:border-box; }
+html, body { margin:0; width:1280px; height:800px; overflow:clip; }
+body { position:relative; font:16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink);
+  background:radial-gradient(circle at 18% 12%, rgba(255,255,255,.10), transparent 45%), linear-gradient(135deg, var(--bg1), var(--bg2)); }
+
+/* Copy */
+.copy { position:absolute; left:64px; top:0; bottom:0; width:380px; display:flex; flex-direction:column; justify-content:center; }
+.copy.top { justify-content:flex-start; padding-top:96px; }
+.eyebrow { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600; color:var(--ink2); margin-bottom:22px; }
+.eyebrow img { width:30px; height:30px; background:#fff; border-radius:8px; padding:3px; }
+.copy h1 { font-size:44px; line-height:1.12; margin:0 0 18px; letter-spacing:-.01em; }
+.copy p { font-size:20px; line-height:1.45; margin:0; color:var(--ink2); }
+.copy p + p { margin-top:12px; }
+
+/* Browser window, bleeding off the bottom */
+.browser { position:absolute; left:500px; top:56px; width:740px; height:800px; background:var(--win); border-radius:12px 12px 0 0;
+  overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.35); color:var(--fg); }
+.tabs { height:38px; background:var(--chrome); display:flex; align-items:flex-end; padding:0 12px; gap:8px; }
+.dots { display:flex; gap:7px; margin:0 10px 13px 2px; } .dots i { width:12px; height:12px; border-radius:50%; background:#ff5f57; }
+.dots i:nth-child(2) { background:#febc2e; } .dots i:nth-child(3) { background:#28c840; }
+.tab { height:30px; width:210px; background:var(--bar); border-radius:8px 8px 0 0; padding:6px 12px; font-size:12px; color:var(--fg);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.toolbar { height:44px; background:var(--bar); display:flex; align-items:center; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); }
+.toolbar svg { width:18px; height:18px; fill:none; stroke:var(--tool); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.addr { flex:1; height:30px; border-radius:15px; background:var(--addr); color:var(--addr-ink); font-size:13px; display:flex; align-items:center; padding:0 14px; gap:8px; }
+.ext { position:relative; width:30px; height:30px; display:grid; place-items:center; border-radius:50%; flex:none; }
+.ext.on { background:var(--addr); }
+.ext img { width:18px; height:18px; }
+.badge { position:absolute; right:-6px; bottom:-1px; font:700 9px/1 system-ui, sans-serif; color:#fff; background:#2e7d32; border-radius:4px; padding:2px 3px; }
+.viewport { position:absolute; top:82px; left:0; right:0; bottom:0; background:var(--page); overflow:hidden; }
+.viewport > iframe { border:0; width:100%; height:100%; display:block; }
+
+/* Backdrop: a plain practice-management page, kept low-contrast so the extension stands out */
+.app { display:grid; grid-template-columns:150px 1fr; height:100%; }
+.side { background:var(--side); border-right:1px solid var(--line); padding:18px 14px; }
+.side b { display:block; height:10px; border-radius:5px; background:var(--skel); margin:0 0 16px; }
+.side b:nth-child(1) { width:70%; height:14px; margin-bottom:28px; } .side b:nth-child(odd) { width:60%; } .side b.on { background:var(--accent); opacity:.35; }
+.main { padding:22px 26px; }
+.crumb { font-size:12px; color:var(--muted); margin-bottom:6px; }
+.main h2 { font-size:22px; margin:0; color:var(--fg); }
+.client { font-size:14px; color:var(--muted); margin:4px 0 16px; }
+.ptabs { display:flex; gap:18px; border-bottom:1px solid var(--line); font-size:13px; color:var(--muted); margin-bottom:18px; }
+.ptabs span { padding-bottom:8px; } .ptabs span:first-child { color:var(--fg); border-bottom:2px solid var(--accent); font-weight:600; }
+.box { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+.box b { display:block; height:9px; border-radius:5px; background:var(--skel); margin:10px 0; }
+.box b:first-child { width:35%; height:11px; margin-top:0; }
+
+/* The toolbar panel, dropped from the extension icon */
+.popup { position:absolute; right:14px; top:6px; width:340px; background:#fff; border-radius:8px; overflow:hidden; transform-origin:top right;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 14px 40px rgba(0,0,0,.28); z-index:5; }
+@media (prefers-color-scheme: dark) { .popup { background:#1b1f24; box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 14px 40px rgba(0,0,0,.6); } }
+.popup iframe { border:0; width:340px; display:block; height:400px; }
+.scale { transform:scale(var(--s, 1.22)); }
+
+/* Shot 5: the panel sits under the copy instead of under the toolbar icon. */
+.popup.solo { position:relative; right:auto; top:auto; margin-top:30px; flex:none; }
+
+/* Page card host (shot 2) */
+.cardhost { position:absolute; z-index:5; transform-origin:bottom right; }
