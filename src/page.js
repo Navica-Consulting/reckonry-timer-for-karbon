@@ -278,9 +278,9 @@
     return putAction('update', { description: joinNote(cur.description, text) });
   }
 
-  // Changes the running timer's work item, contact, role, or task type. Only the keys passed change.
-  // Uses the same update call as notes; it isn't captured for these fields, so the result is checked.
-  async function edit({ workKey, linkType = 'WorkItem', roleKey, taskTypeKey }) {
+  // Changes the running timer's work item, contact, role, task type, or notes. Only the keys passed change.
+  // Uses the same update call as notes; it isn't captured for the other fields, so the result is checked.
+  async function edit({ workKey, linkType = 'WorkItem', roleKey, taskTypeKey, description }) {
     const cur = await getState();
     if (cur.stopwatchState === 'Stopped') throw new Error('No timer is running, so there is nothing to change.');
     const o = {};
@@ -293,6 +293,7 @@
     }
     if (roleKey !== undefined) Object.assign(o, { actorPermaKey: roleKey || null, actorName: null });
     if (taskTypeKey !== undefined) Object.assign(o, { taskTypePermaKey: taskTypeKey || null, taskTypeName: null });
+    if (description !== undefined) o.description = description;
     const after = await putAction('update', o);
     const kept = ['entityPermaKey', 'actorPermaKey', 'taskTypePermaKey'].every((k) => !(k in o) || realKey(after[k]) === realKey(o[k]));
     if (!kept) throw new Error('Karbon did not keep the change. Try it in Karbon, or set it when you stop.');

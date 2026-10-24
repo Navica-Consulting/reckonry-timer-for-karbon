@@ -34,7 +34,6 @@ h2 { font-size:12px; margin:14px 0 6px; color:var(--muted); text-transform:upper
 input[type=text], input[type=search], textarea, select {
   font:inherit; color:inherit; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; width:100%; }
 textarea { resize:vertical; min-height:2.4em; }
-#noteRow { margin-top:10px; }
 /* Role and task type side by side in the timer card, to keep the panel short. */
 .pair { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .pair select { min-width:0; }
@@ -75,7 +74,6 @@ label.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--mute
 .chosen .t { display:block; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chosen .s { display:block; color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #quickList:not(:empty) { margin-top:6px; }
-#noteRow label { display:flex; }
 
 /* Preferences */
 #prefsBox > summary { display:flex; align-items:center; gap:8px; list-style:none; cursor:pointer; font-weight:600; padding:4px 2px; border-radius:6px; }
@@ -152,3 +150,6 @@ input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:v
 @media (prefers-reduced-motion: reduce) { .bounce { animation:none; } }
 .icon.danger { color:#b42318; }
 @media (prefers-color-scheme: dark) { .icon.danger { color:#ff8a80; } }
+/* Armed: the first press fills the button red; a second press confirms. */
+.icon.danger.armed, .icon.danger.armed:hover { background:#b42318; color:#fff; }
+@media (prefers-color-scheme: dark) { .icon.danger.armed, .icon.danger.armed:hover { background:#ff8a80; color:#1b1f24; } }

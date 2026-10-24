@@ -62,14 +62,8 @@
       </div>
     </div>
 
-    <form id="noteRow" class="row">
-      <label for="noteText" class="grow" style="margin:0">
-        <input id="noteText" type="text" placeholder="Add a note to this timer" autocomplete="off">
-      </label>
-      <button class="icon" type="submit" aria-label="Add note" title="Add note">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
-      </button>
-    </form>
+    <label for="curNotes" class="field">Notes <span id="curNotesReq" class="req" hidden>(required)</span></label>
+    <textarea id="curNotes" rows="2" placeholder="Add a note to this timer"></textarea>
   </section>
 
   <!-- Start, shown only with no timer running: same field order as Karbon's own timer (Work, Role, Task type, Notes) -->

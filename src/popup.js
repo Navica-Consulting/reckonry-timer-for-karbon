@@ -3,11 +3,11 @@ const ICON = {
   pause: 'M9 6v12M15 6v12',
   play: 'M8 5.5v13l10-6.5z',
   start: 'M9 6.5v11l9-5.5z',
-  swap: 'M8 3L4 7l4 4M4 7h16M16 13l4 4-4 4M20 17H4',
 };
 
 let current = null;      // timer state
 let here = null;         // the active tab, when it is a Karbon work item: { key, title }
+let notesTimer = null;   // pending save of the notes field
 let timeCfg = null;      // the firm's time settings: { workOnly, notesRequired }
 let tick = null;
 let chosen = null;       // the work item or contact picked in the Work field
@@ -63,7 +63,6 @@ function render(s) {
   $('pill').className = `pill ${st === 'Started' ? 'running' : st === 'Paused' ? 'paused' : ''}`;
 
   $('timer').hidden = !act;
-  if (!act) $('swapAsk').hidden = true;
   if (act) {
     renderDetails(s);
     const resumeMode = st === 'Paused';
@@ -72,14 +71,8 @@ function render(s) {
     $('toggle').title = resumeMode ? 'Resume timer' : 'Pause timer';
   }
 
-  // The start panel is always shown; with a timer running it switches instead.
-  const verb = act ? 'Switch timer' : 'Start timer';
-  $('startHeading').textContent = verb;
-  $('go').setAttribute('aria-label', verb);
-  $('go').title = verb;
-  // Two opposing arrows read as "swap", so a running timer does not look like a second start.
-  $('go').classList.toggle('swap', !!act);
-  $('goIcon').setAttribute('d', act ? ICON.swap : ICON.start);
+  // One form at a time: the running timer's card, or the start form when nothing runs.
+  $('startBox').hidden = act;
 
   clearInterval(tick);
   const draw = () => {
@@ -118,6 +111,9 @@ function renderDetails(s) {
   $('curTaskReq').hidden = !cfg.taskTypeRequired;
   setInvalid($('curRole'), !!cfg.roleRequired && emptySel($('curRole')));
   setInvalid($('curTask'), !!cfg.taskTypeRequired && emptySel($('curTask')));
+  $('curNotesReq').hidden = !cfg.notesRequired;
+  // Don't overwrite what you're typing when the state refreshes.
+  if (document.activeElement !== $('curNotes') && !notesTimer) $('curNotes').value = s.description || '';
 }
 
 function setInvalid(field, on) {
@@ -163,14 +159,91 @@ async function toFinishForm({ note, then = null, thenTitle = null, missing }) {
   location.href = 'complete.html?mode=popup';
 }
 
-$('stop').addEventListener('click', async () => {
-  const note = await noteFor('manualStop');
+// ---- Stop, swap, and discard ----
+// Stop and Swap save the entry from the card. Required fields still empty bounce instead of opening a second form.
+// Focus stays on the button: focusing the Work field would open its recents over the red outline.
+const FIELD = { work: 'curQ', role: 'curRole', taskType: 'curTask', notes: 'curNotes' };
+const NOUN = { role: 'a role', taskType: 'a task type', notes: 'a note' };
+
+function missingHere() {
+  const m = [];
+  const cfg = timeCfg || {};
+  if (!current.work) m.push('work');
+  if (cfg.roleRequired && emptySel($('curRole'))) m.push('role');
+  if (cfg.taskTypeRequired && emptySel($('curTask'))) m.push('taskType');
+  return m;
+}
+
+function bounce(missing) {
+  if (missing.includes('work') && current.work) { changingWork = true; renderDetails(current); }
+  for (const k of missing) {
+    const f = $(FIELD[k]);
+    setInvalid(f, true);
+    f.classList.remove('bounce');
+    void f.offsetWidth; // restarts the animation on a second press
+    f.classList.add('bounce');
+    f.addEventListener('animationend', () => f.classList.remove('bounce'), { once: true });
+  }
+  const nouns = missing.map((k) => (k === 'work' ? (workOnly() ? 'a work item' : 'a work item or contact') : NOUN[k]));
+  say(missing.includes('notes') ? 'Your firm requires a note on every time entry. Add one first.' : `Choose ${nouns.length > 1 ? `${nouns.slice(0, -1).join(', ')}${nouns.length > 2 ? ',' : ''} and ${nouns.at(-1)}` : nouns[0]} first.`);
+}
+
+// Saves the running timer, or bounces what's missing. Returns the save result, or null.
+async function saveCurrent() {
+  const missing = missingHere();
+  if (missing.length) { bounce(missing); return null; }
   say('Working.');
-  const r = await send('stopAndSave', { note, interactive: true });
-  if (!r || !r.ok) return sayError(r);
-  if (r.result && r.result.needsCompletion) return toFinishForm({ note, missing: r.result.missing });
-  say(r.result && r.result.saved ? `Saved a ${r.result.minutes} minute entry.` : 'No timer to save.');
+  // Notes edited but not yet saved go on this entry.
+  if (!(await saveNotes(true))) return null;
+  const r = await send('stopAndSave', { note: await noteFor('manualStop'), interactive: true });
+  if (!r || !r.ok) { sayError(r); return null; }
+  if (r.result && r.result.needsCompletion) { bounce(r.result.missing); return null; }
+  return r.result || {};
+}
+
+const savedText = (res) => (res.saved ? `Saved a ${res.minutes} minute entry.` : 'No timer to save.');
+
+$('stop').addEventListener('click', async () => {
+  const res = await saveCurrent();
+  if (!res) return;
+  say(savedText(res));
   refresh();
+});
+
+// Swap: save this timer, then start a blank one with your last-used role and task type.
+$('swap').addEventListener('click', async () => {
+  const res = await saveCurrent();
+  if (!res) return;
+  const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
+  const r = await send('start', { workKey: null, linkType: null, roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: await noteFor('manualStart'), interactive: true });
+  if (!r || !r.ok) { refresh(); return sayError(r); }
+  await refresh();
+  say(`${savedText(res)} New timer started. Choose its work item.`);
+});
+
+// Two presses, so a stray click can't throw time away. The first fills the button red
+// and relabels it; it disarms after a few seconds or on blur. Play then starts a new timer.
+let discardArmed = null;
+function setDiscardArmed(on) {
+  const b = $('discard');
+  clearTimeout(discardArmed);
+  discardArmed = on ? setTimeout(() => setDiscardArmed(false), 4000) : null;
+  b.classList.toggle('armed', on);
+  const mins = on && current ? Math.max(1, Math.ceil(elapsedSeconds(current) / 60)) : 0;
+  const label = on ? `Press again to discard ${mins} minute${mins === 1 ? '' : 's'}` : 'Discard timer';
+  b.setAttribute('aria-label', label);
+  b.title = label;
+}
+$('discard').addEventListener('blur', () => setDiscardArmed(false));
+$('discard').addEventListener('click', async () => {
+  if (!discardArmed) return setDiscardArmed(true);
+  setDiscardArmed(false);
+  say('Working.');
+  const r = await send('discard', {});
+  if (!r || !r.ok) return sayError(r);
+  await refresh();
+  say('Timer discarded. Press play to start a new one.');
+  $('go').focus();
 });
 
 $('work').addEventListener('click', async () => {
@@ -219,13 +292,23 @@ $('curQ').addEventListener('focus', () => {
   if (!$('curQ').value.trim() && !$('curResults').children.length) loadRecents(false, BOX.cur);
 });
 
-$('noteRow').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const text = $('noteText').value.trim();
-  if (!text) return;
-  const ok = await run('appendNote', { text: await noteFor('quickNote', { text }) }, () => 'Note added.');
-  if (ok) $('noteText').value = '';
+// Notes save a moment after you stop typing, and when you leave the field.
+async function saveNotes(quiet = false) {
+  clearTimeout(notesTimer);
+  notesTimer = null;
+  const text = $('curNotes').value;
+  if (!current || text === (current.description || '')) return true;
+  const r = await send('edit', { description: text });
+  if (!r || !r.ok) { sayError(r); return false; }
+  current.description = text;
+  if (!quiet) say('Notes saved.');
+  return true;
+}
+$('curNotes').addEventListener('input', () => {
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(saveNotes, 800);
 });
+$('curNotes').addEventListener('change', () => saveNotes());
 
 // ---- Work field: pick an item, then press play (Karbon's order) ----
 function choose(item) {
@@ -249,20 +332,10 @@ function clearChoice() {
 $('change').addEventListener('click', clearChoice);
 
 // Work is optional: with nothing chosen, the timer starts blank and the details are asked for at stop.
-// With a timer running, play first asks whether to save or discard it. Nothing needs to be chosen to switch.
 async function startChosen() {
-  const item = chosen;
-  if (!isActive(current)) return startNew(item);
-  if (item && current.work === item.key) return say('That item already has the timer.');
-  askSwap(true);
+  if (!isActive(current)) startNew(chosen);
 }
 
-function askSwap(on) {
-  $('swapAsk').hidden = !on;
-  if (on) $('swapSave').focus();
-}
-
-// The fields are read when you answer, so changes made while the question is open count.
 async function startArgs(item) {
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
   return {
@@ -273,36 +346,8 @@ async function startArgs(item) {
   };
 }
 
-async function swap(how) {
-  askSwap(false);
-  const item = chosen;
-  if (!isActive(current)) return startNew(item);
+async function startNew(item) {
   const args = await startArgs(item);
-  say('Working.');
-  if (how === 'save') {
-    const note = await noteFor('manualStop');
-    const r = await send('stopAndSave', { note, interactive: true });
-    if (!r || !r.ok) return sayError(r);
-    if (r.result && r.result.needsCompletion) {
-      await rememberPicks();
-      return toFinishForm({ note, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
-    }
-    return startNew(item, args, r.result && r.result.saved ? `Saved a ${r.result.minutes} minute entry. ` : '');
-  }
-  const r = await send('discard', {});
-  if (!r || !r.ok) return sayError(r);
-  return startNew(item, args, 'Timer discarded. ');
-}
-
-$('swapSave').addEventListener('click', () => swap('save'));
-$('swapDiscard').addEventListener('click', () => swap('discard'));
-$('swapCancel').addEventListener('click', () => { askSwap(false); say(''); $('go').focus(); });
-$('swapAsk').addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { e.preventDefault(); $('swapCancel').click(); }
-});
-
-async function startNew(item, args, lead = '') {
-  args = args || await startArgs(item);
   say('Starting. If Karbon is closed, it opens in a background tab first.');
   const stopNote = await noteFor('manualStop');
   const r = await send('start', { ...args, stopNote, interactive: true });
@@ -311,7 +356,7 @@ async function startNew(item, args, lead = '') {
   if (r.result && r.result.needsCompletion) {
     return toFinishForm({ note: stopNote, then: args, thenTitle: item ? item.title : null, missing: r.result.missing });
   }
-  say(lead + (item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.'));
+  say(item ? `Timer started on ${item.title || 'the item'}.` : 'Timer started. Choose a work item when you stop.');
   $('desc').value = '';
   $('q').value = '';
   chosen = null;
