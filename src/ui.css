@@ -71,6 +71,8 @@ label.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--mute
 .chosen { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
 .chosen .t { display:block; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chosen .s { display:block; color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pickable { cursor:pointer; }
+.pickable:hover { border-color:var(--accent); }
 #quickList:not(:empty) { margin-top:6px; }
 
 /* Preferences */
@@ -102,7 +104,7 @@ input.switch:checked::before { transform:translateX(16px); }
 kbd { font:11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:2px 4px; background:var(--bg); color:var(--fg); }
 .links { display:flex; gap:16px; }
 .sub-note { margin:4px 0 8px; color:var(--muted); font-size:12px; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, .pickable:focus-visible {
   outline:3px solid var(--accent); outline-offset:2px; }
 
 /* Finish form and other shared bits */

@@ -47,3 +47,45 @@ function fillCurrent(sel, list, key, noun) {
   sel.replaceChildren(...opts.map((o) => el('option', { value: o.key }, o.name)));
   sel.value = key || (none ? none.key : '');
 }
+
+// A chosen-item box that reopens its search when clicked, so it needs no Change button.
+// Clicks on a control inside it, like the work item's open link, keep their own job.
+function clickToChange(box, label, fn) {
+  Object.assign(box, { tabIndex: 0, title: label });
+  box.setAttribute('role', 'button');
+  box.classList.add('pickable');
+  box.addEventListener('click', (e) => { if (!e.target.closest('button, a')) fn(); });
+  box.addEventListener('keydown', (e) => {
+    if (e.target !== box || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    fn();
+  });
+}
+
+// Work search: each list floats under its field while focus is in the field or the list.
+// box names the ids: q (field), combo (wrapper), drop (floating list).
+function openDrop(box, on) {
+  $(box.drop).hidden = !on;
+  $(box.q).setAttribute('aria-expanded', String(on));
+}
+
+function bindDrop(box) {
+  const combo = $(box.combo);
+  combo.addEventListener('focusin', () => openDrop(box, true));
+  combo.addEventListener('focusout', (e) => { if (!combo.contains(e.relatedTarget)) openDrop(box, false); });
+  // Keeps focus in the field on click, so the list doesn't close before the pick lands.
+  $(box.drop).addEventListener('mousedown', (e) => e.preventDefault());
+  combo.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented) return;
+    if (e.key === 'Escape' && !$(box.drop).hidden) { e.preventDefault(); $(box.q).focus(); openDrop(box, false); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const opts = [...$(box.drop).querySelectorAll('button')];
+    if (!opts.length) return;
+    e.preventDefault();
+    openDrop(box, true);
+    const i = opts.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') opts[Math.min(i + 1, opts.length - 1)].focus();
+    else if (i <= 0) $(box.q).focus();
+    else opts[i - 1].focus();
+  });
+}

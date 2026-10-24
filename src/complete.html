@@ -9,8 +9,6 @@
     body.window { width:auto; max-width:440px; margin:0 auto; }
     #elapsedBig { font-size:26px; font-weight:600; font-variant-numeric:tabular-nums; }
     #why { color:var(--muted); }
-    .fixed { border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
-    .fixed .t { font-weight:600; }
   </style>
 </head>
 <body>
@@ -26,34 +24,48 @@
   </div>
 
   <form id="finish" novalidate>
-    <label for="q" class="field">Work <span id="workReq" class="req"></span></label>
-    <div id="workFixed" class="fixed" hidden><span class="t" id="workFixedTitle"></span></div>
+    <!-- A timer on a client shows the client here; Work below can still move the time to a work item. -->
+    <div id="clientRow" hidden>
+      <label for="clientQ" class="field">Client</label>
+      <div id="clientChosen" class="chosen">
+        <div class="grow"><span id="clientTitle" class="t"></span></div>
+      </div>
+      <div id="clientPicker" hidden>
+        <input id="clientQ" type="search" placeholder="Search clients" autocomplete="off" aria-controls="clientResults">
+        <div id="clientHead" class="muted" style="margin-top:6px"></div>
+        <ul class="items" id="clientResults" aria-live="polite"></ul>
+      </div>
+    </div>
+    <label for="q" class="field">Work</label>
     <div id="chosen" class="chosen" hidden>
       <div class="grow"><span id="chosenTitle" class="t"></span><span id="chosenSub" class="s"></span></div>
-      <button id="change" type="button" class="linklike">Change</button>
     </div>
     <div id="picker">
-      <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="workErr">
+      <div id="combo" class="combo">
+        <input id="q" type="search" placeholder="Search work and contacts" autocomplete="off" aria-controls="results" aria-describedby="workErr" aria-expanded="false">
+        <div id="drop" class="drop" hidden>
+          <div id="resultsHead" class="muted"></div>
+          <ul class="items" id="results" aria-live="polite"></ul>
+        </div>
+      </div>
       <ul class="items" id="suggest" style="margin-top:6px"></ul>
-      <div id="resultsHead" class="muted" style="margin-top:6px"></div>
-      <ul class="items" id="results" aria-live="polite"></ul>
     </div>
     <p id="workErr" class="err" hidden></p>
 
     <div class="pair">
       <div>
-        <label for="role" class="field">Role <span id="roleReq" class="req"></span></label>
+        <label for="role" class="field">Role</label>
         <select id="role" aria-describedby="roleErr"></select>
         <p id="roleErr" class="err" hidden></p>
       </div>
       <div>
-        <label for="taskType" class="field">Task type <span id="taskTypeReq" class="req"></span></label>
+        <label for="taskType" class="field">Task type</label>
         <select id="taskType" aria-describedby="taskTypeErr"></select>
         <p id="taskTypeErr" class="err" hidden></p>
       </div>
     </div>
 
-    <label for="desc" class="field">Notes <span id="notesReq" class="req"></span></label>
+    <label for="desc" class="field">Notes</label>
     <textarea id="desc" rows="2" aria-describedby="notesErr"></textarea>
     <p id="notesErr" class="err" hidden></p>
 

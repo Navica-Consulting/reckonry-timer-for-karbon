@@ -30,7 +30,8 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - Trademark and listing name: check against the Karbon brand guide, which Max has (waiting on: nothing).
 - Monetization model: not decided. Claude suggested launching free as a lead source for Navica, Reckonry, and Liminos, with a possible paid firm-admin tier later (waiting on: Max).
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it; Microsoft publisher verification would be needed first (waiting on: Max).
-- Value exchange design: Claude drafted a ladder (breakage-alert email list at install, local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review (waiting on: Max).
+- Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review. Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
+- Feedback form: Send feedback opens a Google Form, uncommitted in 0.7.19. To do before release: turn off "Restrict to users in Navica LLC" in the form's settings, fix the "Pease add more details" typo, test the button in Chrome, give `docs/privacy-policy.md` a new effective date and copy it to the Google Site, and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
 
 ## Decisions
 - Timer behavior and Preferences decisions are in `context/timer-behavior.md`.
@@ -41,6 +42,13 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-24, feedback form (Claude Code)
+- Max chose a Google Form over a Karbon email draft. The draft plan is replaced in `artifacts/feedback-draft-plan.md`.
+- Send feedback opens the form with the version and settings prefilled in its Logs field (`entry.1196218190`). The settings page keeps "Email us instead," the old `mailto:` link.
+- Changed `src/prefs.js`, `src/welcome.html`, and `src/welcome.js`. Updated the privacy policy's Feedback section, the `docs/PRIVACY.md` inventory and review note, and `context/growth.md`.
+- Checked with stubbed Chrome APIs: the link opens the live form with the details filled in, line breaks intact. Not submitted, and not tested as a loaded extension.
+- Not committed. It shares the working tree and version 0.7.19 with the signed-out work, so commit these files on their own.
+
 ### 2026-10-24, consistent page cards and finish form in the panel (Claude Code)
 - Toasts, the no-work-item prompt, and the sign-in warning in `content.js` share one card (`makeCard`) built from the panel's tokens, with a status pill. Light and dark follow the system.
 - The finish form now opens in the toolbar panel via `chrome.action.openPopup()`, with the old window as a fallback. No new permission.

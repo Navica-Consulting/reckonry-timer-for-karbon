@@ -33,14 +33,13 @@
 
     <!-- The running timer's details, editable. Missing required ones are outlined in red. -->
     <label for="curQ" class="field">
-      <span id="curWorkLabel">Work or contact</span> <span id="curWorkReq" class="req">(required)</span>
+      <span id="curWorkLabel">Work or contact</span>
     </label>
     <div id="curChosen" class="chosen">
       <div class="grow">
         <button id="work" type="button" title="Open this work item in Karbon"></button>
         <span id="client" class="s"></span>
       </div>
-      <button id="curChange" type="button" class="linklike">Change</button>
     </div>
     <div id="curPicker" hidden>
       <div id="curCombo" class="combo">
@@ -53,16 +52,16 @@
     </div>
     <div class="pair">
       <div>
-        <label for="curRole" class="field">Role <span id="curRoleReq" class="req" hidden>(required)</span></label>
+        <label for="curRole" class="field">Role</label>
         <select id="curRole"></select>
       </div>
       <div>
-        <label for="curTask" class="field">Task type <span id="curTaskReq" class="req" hidden>(required)</span></label>
+        <label for="curTask" class="field">Task type</label>
         <select id="curTask"></select>
       </div>
     </div>
 
-    <label for="curNotes" class="field">Notes <span id="curNotesReq" class="req" hidden>(required)</span></label>
+    <label for="curNotes" class="field">Notes</label>
     <textarea id="curNotes" rows="2" placeholder="Add a note to this timer"></textarea>
   </section>
 
@@ -85,7 +84,6 @@
     <label for="q" id="qLabel" class="field">Work <span class="req">(optional)</span></label>
     <div id="chosen" class="chosen" hidden>
       <div class="grow"><span id="chosenTitle" class="t"></span><span id="chosenSub" class="s"></span></div>
-      <button id="change" type="button" class="linklike">Change</button>
     </div>
     <div id="picker">
       <div id="combo" class="combo">

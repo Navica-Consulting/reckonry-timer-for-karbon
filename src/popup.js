@@ -110,11 +110,12 @@ function renderDetails(s) {
   fillCurrent($('curRole'), lk.roles || [], s.roleKey, 'role');
   fillCurrent($('curTask'), lk.taskTypes || [], s.taskTypeKey, 'task type');
   const cfg = timeCfg || {};
-  $('curRoleReq').hidden = !cfg.roleRequired;
-  $('curTaskReq').hidden = !cfg.taskTypeRequired;
+  // Required shows only as a red outline while empty; screen readers get aria-required.
+  $('curRole').setAttribute('aria-required', String(!!cfg.roleRequired));
+  $('curTask').setAttribute('aria-required', String(!!cfg.taskTypeRequired));
   setInvalid($('curRole'), !!cfg.roleRequired && emptySel($('curRole')));
   setInvalid($('curTask'), !!cfg.taskTypeRequired && emptySel($('curTask')));
-  $('curNotesReq').hidden = !cfg.notesRequired;
+  $('curNotes').setAttribute('aria-required', String(!!cfg.notesRequired));
   // Don't overwrite what you're typing when the state refreshes.
   if (document.activeElement !== $('curNotes') && !notesTimer) $('curNotes').value = s.description || '';
 }
@@ -276,7 +277,7 @@ async function setWork(item) {
   $('curQ').value = '';
 }
 
-$('curChange').addEventListener('click', () => {
+clickToChange($('curChosen'), 'Change work or contact', () => {
   changingWork = true;
   renderDetails(current);
   $('curQ').focus();
@@ -289,7 +290,7 @@ $('curQ').addEventListener('keydown', (e) => {
   e.preventDefault();
   changingWork = false;
   renderDetails(current);
-  $('curChange').focus();
+  $('curChosen').focus();
 });
 $('curQ').addEventListener('focus', () => {
   if (!$('curQ').value.trim() && !$('curResults').children.length) loadRecents(false, BOX.cur);
@@ -330,7 +331,7 @@ function clearChoice() {
   $('picker').hidden = false;
   $('q').focus();
 }
-$('change').addEventListener('click', clearChoice);
+clickToChange($('chosen'), 'Change work or contact', clearChoice);
 
 // Work is optional: with nothing chosen, the timer starts blank and the details are asked for at stop.
 async function startChosen() {
@@ -402,33 +403,6 @@ const BOX = {
   start: { q: 'q', head: 'resultsHead', list: 'results', combo: 'combo', drop: 'drop', pick: (it) => choose(it), seq: 0, debounce: null },
   cur: { q: 'curQ', head: 'curResultsHead', list: 'curResults', combo: 'curCombo', drop: 'curDrop', pick: (it) => setWork(it), seq: 0, debounce: null },
 };
-
-// Each list floats under its field while focus is in the field or the list.
-function openDrop(box, on) {
-  $(box.drop).hidden = !on;
-  $(box.q).setAttribute('aria-expanded', String(on));
-}
-
-function bindDrop(box) {
-  const combo = $(box.combo);
-  combo.addEventListener('focusin', () => openDrop(box, true));
-  combo.addEventListener('focusout', (e) => { if (!combo.contains(e.relatedTarget)) openDrop(box, false); });
-  // Keeps focus in the field on click, so the list doesn't close before the pick lands.
-  $(box.drop).addEventListener('mousedown', (e) => e.preventDefault());
-  combo.addEventListener('keydown', (e) => {
-    if (e.defaultPrevented) return;
-    if (e.key === 'Escape' && !$(box.drop).hidden) { e.preventDefault(); $(box.q).focus(); openDrop(box, false); return; }
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-    const opts = [...$(box.drop).querySelectorAll('button')];
-    if (!opts.length) return;
-    e.preventDefault();
-    openDrop(box, true);
-    const i = opts.indexOf(document.activeElement);
-    if (e.key === 'ArrowDown') opts[Math.min(i + 1, opts.length - 1)].focus();
-    else if (i <= 0) $(box.q).focus();
-    else opts[i - 1].focus();
-  });
-}
 
 function showResults(box, head, items) {
   $(box.head).textContent = head;

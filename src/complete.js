@@ -8,10 +8,16 @@ let state = null;    // the paused timer
 let pending = null;  // { note, then, thenTitle, missing, reason }
 let cfg = null;      // the firm's time settings
 let chosen = null;   // the work item or contact picked here
+let client = null;   // another client picked for a timer that is on a client
 let discardArmed = false;
 
 const NOUN = { work: 'a work item or contact', role: 'a role', taskType: 'a task type', notes: 'a note' };
 const workOnly = () => !!(cfg && cfg.workOnly);
+// The timer's own item, when it's a work item rather than a client.
+const onWorkItem = () => !!(state && state.work) && (!state.linkType || state.linkType === 'WorkItem');
+const onClient = () => !!(state && state.work) && !onWorkItem();
+// A client only counts where the firm allows time on clients.
+const hasWork = () => !!chosen || onWorkItem() || (onClient() && !workOnly());
 
 function say(text) { $('msg').textContent = text; }
 
@@ -47,23 +53,29 @@ function showErrors(missing) {
 }
 
 // ---- Work picker ----
-function itemRow(item) {
-  const b = el('button', { type: 'button', class: 'item', onclick: () => choose(item) },
+function itemRow(item, onPick = choose) {
+  const b = el('button', { type: 'button', class: 'item', onclick: () => onPick(item) },
     el('span', { class: 't' }, item.title || 'Untitled', TAGS[item.linkType] ? el('span', { class: 'tag' }, TAGS[item.linkType]) : null),
     item.subtitle ? el('span', { class: 's' }, item.subtitle) : null);
   b.setAttribute('aria-label', `Choose ${item.title || 'item'}${item.subtitle ? `, ${item.subtitle}` : ''}`);
   return el('li', {}, b);
 }
 
-function choose(item) {
-  chosen = item;
+// The chosen work in the same box as the panel's timer card. Click it to search again.
+function showChosen(item) {
   $('chosenTitle').textContent = item.title || 'Untitled';
   if (TAGS[item.linkType]) $('chosenTitle').append(' ', el('span', { class: 'tag' }, TAGS[item.linkType]));
   $('chosenSub').textContent = item.subtitle || '';
   $('chosen').hidden = false;
   $('picker').hidden = true;
+}
+
+function choose(item) {
+  chosen = item;
+  openDrop(DROP, false);
+  showChosen(item);
   $('workErr').hidden = true;
-  $('q').removeAttribute('aria-invalid');
+  markMissing();
   say(`${item.title || 'Item'} chosen.`);
   $('role').focus();
 }
@@ -72,9 +84,11 @@ function clearChoice() {
   chosen = null;
   $('chosen').hidden = true;
   $('picker').hidden = false;
+  markMissing();
+  if (!$('results').children.length) loadRecents();
   $('q').focus();
 }
-$('change').addEventListener('click', clearChoice);
+clickToChange($('chosen'), 'Change work', clearChoice);
 
 function showResults(head, items) {
   $('resultsHead').textContent = head;
@@ -95,18 +109,61 @@ async function runSearch(term) {
   const w = await send('search', { term, kind: 'work', take: 6 });
   if (mine !== searchSeq) return;
   if (!w || !w.ok) { $('resultsHead').textContent = (w && w.error) || 'Search failed.'; return; }
-  const c = workOnly() ? null : await send('search', { term, kind: 'contact', take: 4 });
+  const c = workOnly() || onClient() ? null : await send('search', { term, kind: 'contact', take: 4 });
   if (mine !== searchSeq) return;
   const items = [...w.result, ...((c && c.ok && c.result) || [])];
   showResults(items.length ? `${items.length} result${items.length === 1 ? '' : 's'}` : 'No matches.', items);
 }
 
+// Recents and results pop up under the field, like the panel's Work search.
+const DROP = { q: 'q', combo: 'combo', drop: 'drop' };
+bindDrop(DROP);
+
 let debounce = null;
 $('q').addEventListener('input', () => {
+  openDrop(DROP, true);
   clearTimeout(debounce);
   const term = $('q').value.trim();
   if (term.length < 2) { searchSeq++; debounce = setTimeout(loadRecents, 200); return; }
   debounce = setTimeout(() => runSearch(term), 350);
+});
+
+// ---- Client, for a timer that is on a client ----
+function showClient(title, linkType) {
+  $('clientTitle').textContent = title || 'Client';
+  if (TAGS[linkType]) $('clientTitle').append(' ', el('span', { class: 'tag' }, TAGS[linkType]));
+  $('clientChosen').hidden = false;
+  $('clientPicker').hidden = true;
+}
+
+function pickClient(item) {
+  client = item;
+  showClient(item.title, item.linkType);
+  say(`${item.title || 'Client'} chosen.`);
+  $('clientChosen').focus();
+}
+
+clickToChange($('clientChosen'), 'Change client', () => {
+  $('clientChosen').hidden = true;
+  $('clientPicker').hidden = false;
+  $('clientQ').focus();
+});
+
+let clientSeq = 0;
+let clientDebounce = null;
+$('clientQ').addEventListener('input', () => {
+  clearTimeout(clientDebounce);
+  const term = $('clientQ').value.trim();
+  const mine = ++clientSeq;
+  if (term.length < 2) { $('clientHead').textContent = ''; $('clientResults').replaceChildren(); return; }
+  clientDebounce = setTimeout(async () => {
+    $('clientHead').textContent = 'Searching.';
+    const r = await send('search', { term, kind: 'contact', take: 6 });
+    if (mine !== clientSeq) return;
+    if (!r || !r.ok) { $('clientHead').textContent = (r && r.error) || 'Search failed.'; return; }
+    $('clientHead').textContent = r.result.length ? `${r.result.length} result${r.result.length === 1 ? '' : 's'}` : 'No matches.';
+    $('clientResults').replaceChildren(...r.result.map((it) => itemRow(it, pickClient)));
+  }, 350);
 });
 
 // ---- Role and task type ----
@@ -132,12 +189,25 @@ async function loadLookups() {
 // ---- Save, keep paused, discard ----
 function missingHere() {
   const m = [];
-  if (!(state && state.work) && !chosen) m.push('work');
+  if (!hasWork()) m.push('work');
   if (cfg && cfg.roleRequired && emptySel($('role'))) m.push('role');
   if (cfg && cfg.taskTypeRequired && emptySel($('taskType'))) m.push('taskType');
   if (cfg && cfg.notesRequired && !$('desc').value.trim()) m.push('notes');
   return m;
 }
+
+// Like the panel's timer card: required fields still empty keep a red outline until filled.
+// Error text only appears after a save attempt.
+function markMissing() {
+  const m = missingHere();
+  for (const [k, id] of Object.entries(FIELDS)) {
+    if (m.includes(k)) $(id).setAttribute('aria-invalid', 'true');
+    else { $(id).removeAttribute('aria-invalid'); $(`${k}Err`).hidden = true; }
+  }
+}
+$('role').addEventListener('change', markMissing);
+$('taskType').addEventListener('change', markMissing);
+$('desc').addEventListener('input', markMissing);
 
 $('finish').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -145,7 +215,9 @@ $('finish').addEventListener('submit', async (e) => {
   if (missing.length) return showErrors(missing);
   clearErrors();
   const fill = { roleKey: $('role').value || null, taskTypeKey: $('taskType').value || null, description: $('desc').value };
+  // A work item picked here wins; otherwise a newly picked client.
   if (chosen) Object.assign(fill, { workKey: chosen.key, linkType: chosen.linkType || 'WorkItem' });
+  else if (client) Object.assign(fill, { workKey: client.key, linkType: client.linkType || 'Contact' });
   $('save').disabled = true;
   say('Saving.');
   const r = await chrome.runtime.sendMessage({ type: 'finishTimer', fill });
@@ -212,7 +284,9 @@ function explain() {
   if (reason === 'dayEnd') parts.push('This timer was paused at the end of the day. It saves to the day it was recorded.');
   else if (reason === 'switch') parts.push(`Save this time first. Then the timer switches to ${(pending && pending.thenTitle) || 'the new item'}.`);
   else parts.push('Karbon needs a few details before it can save this time.');
-  if (!(state && state.work)) parts.push('Choose the work item or contact it belongs to.');
+  if (onClient() && workOnly()) parts.push('Your firm books time to work items, so choose one.');
+  else if (onClient()) parts.push('It is on a client now. Choose a work item if it belongs to one.');
+  else if (!onWorkItem()) parts.push('Choose the work item or contact it belongs to.');
   $('why').textContent = parts.join(' ');
   if (reason === 'switch') $('save').textContent = 'Save and switch';
 }
@@ -237,23 +311,25 @@ function explain() {
   $('heading').setAttribute('aria-description', `Paused at ${spoken(secs)}.`);
   $('pill').textContent = state.state === 'Started' ? 'Running' : 'Paused';
 
-  if (state.work) {
-    $('workFixed').hidden = false;
-    $('workFixedTitle').textContent = state.title || state.client || 'Already set';
-    $('picker').hidden = true;
-    $('workReq').textContent = '';
-  } else {
-    $('workReq').textContent = '(required)';
-    if (workOnly()) $('q').placeholder = 'Search work items';
+  if (onWorkItem()) {
+    // Already on a work item: show it, changeable. Saving keeps it unless you pick another.
+    showChosen({ title: state.title, linkType: 'WorkItem', subtitle: state.client });
+  } else if (onClient()) {
+    $('clientRow').hidden = false;
+    showClient(state.client, state.linkType);
   }
-  if (cfg && cfg.roleRequired) $('roleReq').textContent = '(required)';
-  if (cfg && cfg.taskTypeRequired) $('taskTypeReq').textContent = '(required)';
-  if (cfg && cfg.notesRequired) $('notesReq').textContent = '(required)';
+  // Required shows as a red outline while empty, with no label text; screen readers get aria-required.
+  if (workOnly() || onClient()) $('q').placeholder = 'Search work items';
+  $('q').setAttribute('aria-required', String(!hasWork()));
+  $('role').setAttribute('aria-required', String(!!(cfg && cfg.roleRequired)));
+  $('taskType').setAttribute('aria-required', String(!!(cfg && cfg.taskTypeRequired)));
+  $('desc').setAttribute('aria-required', String(!!(cfg && cfg.notesRequired)));
   $('desc').value = state.description || '';
   explain();
 
   await loadLookups();
-  if (!state.work) {
+  markMissing();
+  if (!onWorkItem()) {
     // The item you had open in Karbon, as a one-click pick above the recents.
     if (pending && pending.suggest && pending.suggest.key) {
       const sg = pending.suggest;
@@ -261,8 +337,10 @@ function explain() {
       li.querySelector('.item').prepend(el('span', { class: 'lead' }, 'The item you opened: '));
       $('suggest').replaceChildren(li);
     }
+    // Recents load now but stay closed until you click into Work. Focus on the heading
+    // keeps the panel from autofocusing the field and opening them.
     loadRecents();
-    $('q').focus();
+    $('heading').focus();
   } else {
     $((pending && pending.missing && FIELDS[pending.missing[0]]) || 'role').focus();
   }
