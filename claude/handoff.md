@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.14 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.14 (settings page, editable timer card, switch button) went in as one commit and haven't run as a loaded extension yet. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.16 are committed to `main` but not tagged or pushed. 0.7.12 through 0.7.16 (settings page, editable timer card, one form at a time with Swap and Discard) haven't run as a loaded extension yet. Commit `310c9e3` is titled 0.7.15 but holds 0.7.16. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
 
 ## Next step
-Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start and, in the timer card, set its work item, role, and task type before stopping; each should save, or say plainly that Karbon didn't keep it. Then finish.
+Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, then "All settings and help." Check the new page, and read the Connection line under Support: it says whether the background can reach Karbon's API without a tab. Then run one blank start and, in the timer card, set its work item, role, and task type before stopping; each should save, or say plainly that Karbon didn't keep it. Press Swap with a field empty (it should bounce), then with all filled (it should save and start a blank timer). Discard it with two presses, then finish.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -40,6 +40,11 @@ Reload `unpacked/production` in Chrome. Open the stopwatch, then Preferences, th
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-23 and 24, Swap and Discard on the timer card (Claude Code)
+- 0.7.14 asked "Save and switch, or Discard and switch?" from the start panel. Max rejected the two forms.
+- 0.7.15 and 0.7.16: one form at a time. With a timer running, only its card shows, with Pause, Stop, Swap, and Discard icons in one row. Stop and Swap bounce empty required fields instead of opening the finish form, and focus stays on the button so the Work recents don't cover the red outline. Swap starts a blank timer with the last-used role and task type. Discard takes two presses; play then starts a new timer.
+- Tested in the browser pane with stubbed Chrome APIs only.
+
 ### 2026-10-23, editable timer card (Claude Code)
 - The running timer card keeps work item (or contact, where the firm allows contact time), role, and task type visible and editable. Missing required fields get a red outline (Max asked).
 - New page command `edit` in `page.js`, using the stopwatch `update` call with a read-back check. The "None counts as empty" check moved to `ui.js` and is shared with the finish form.
