@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marquee promo tile</title>
+<link rel="stylesheet" href="shots.css">
+<style>
+  /* 1400x560 tile: same frame as the shots, wider and shorter, so the panel bleeds off the bottom. */
+  html, body { width:1400px; height:560px; }
+  .copy { left:80px; width:540px; }
+  .copy h1 { font-size:52px; }
+  .copy p { font-size:22px; }
+  .browser { left:700px; top:48px; width:640px; }
+  .popup { top:10px; right:24px; }
+</style>
+</head>
+<body>
+<div class="copy">
+  <div class="eyebrow"><img src="../src/icons/icon128-face.png" alt="">Reckonry Timer for Karbon</div>
+  <h1>Time tracking that keeps up with you.</h1>
+  <p>Auto-start, auto-switch, reminders, and lock or idle pause for the Karbon timer.</p>
+</div>
+<div class="browser" data-tab="Inbox" data-url="mail.example.com/inbox" data-badge="42m" data-open="1" data-title="Inbox" data-crumb="Mail">
+  <div class="popup scale" style="--s:1.12"><iframe src="../src/popup.html?shot=1" title="Toolbar panel"></iframe></div>
+</div>
+<script src="frame.js"></script>
+</body>
+</html>

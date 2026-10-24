@@ -1,5 +1,5 @@
 #!/bin/bash
-# Renders the Chrome Web Store screenshots to store/screenshots/out/ at 1280x800.
+# Renders the Chrome Web Store screenshots (1280x800) and marquee tile (1400x560) to store/screenshots/out/.
 # Copies src/ to a temp folder with stub.js loaded first, serves it locally, and shoots each page with headless Chrome.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -23,13 +23,13 @@ server=$!
 sleep 1
 
 mkdir -p "$here/out"
-shoot() { # page, output name, color scheme (1 light, 0 dark)
-  local png="$tmp/$2.png"
+shoot() { # page, output name, color scheme (1 light, 0 dark), width, height
+  local png="$tmp/$2.png" w="${4:-1280}" h="${5:-800}"
   "$chrome" --headless=new --disable-gpu --hide-scrollbars --no-first-run --no-default-browser-check \
-    --user-data-dir="$tmp/profile-$2" --window-size=1280,800 --force-device-scale-factor=2 \
+    --user-data-dir="$tmp/profile-$2" --window-size=$w,$h --force-device-scale-factor=2 \
     --virtual-time-budget=6000 --blink-settings=preferredColorScheme=${3:-1} --screenshot="$png" "http://127.0.0.1:$port/shots/$1" >/dev/null 2>&1
-  # Rendered at 2x for clean text, then scaled to the store's 1280x800, with no alpha channel.
-  sips -z 800 1280 "$png" >/dev/null
+  # Rendered at 2x for clean text, then scaled to the store's size, with no alpha channel.
+  sips -z "$h" "$w" "$png" >/dev/null
   sips -s format jpeg -s formatOptions 100 "$png" --out "$tmp/$2.jpg" >/dev/null
   sips -s format png "$tmp/$2.jpg" --out "$here/out/$2.png" >/dev/null
   echo "out/$2.png"
@@ -40,3 +40,4 @@ shoot shot3-start.html 3-start
 shoot shot4-finish.html 4-finish
 shoot shot5-away.html 5-away
 shoot shot1-timer.html 1-timer-dark 0
+shoot marquee.html marquee 1 1400 560
