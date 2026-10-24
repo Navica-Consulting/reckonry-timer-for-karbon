@@ -139,9 +139,14 @@
 
       <section class="group" aria-labelledby="gSwitch">
         <h3 id="gSwitch">Auto-switch</h3>
+        <p class="sub-note">Move a running timer to what I open. The current entry is saved first.</p>
         <label class="opt">
-          <span class="txt">Move a running timer to the item I open<span class="sub">Saves the current entry first</span></span>
-          <input type="checkbox" class="switch" role="switch" name="autoSwitch">
+          <span class="txt">Work</span>
+          <input type="checkbox" class="switch" role="switch" name="autoSwitch" aria-label="Auto-switch on work items">
+        </label>
+        <label class="opt">
+          <span class="txt">Clients</span>
+          <input type="checkbox" class="switch" role="switch" name="autoSwitchContacts" aria-label="Auto-switch on clients">
         </label>
         <div class="nest" data-when="autoSwitch">
           <label class="opt">

@@ -1,7 +1,7 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.7 are committed to `main` but not tagged or pushed. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
+Build stage. v0.7.4 is the latest tag; 0.7.5 through 0.7.11 are committed to `main` but not tagged or pushed. The extension connects to Karbon on install from Karbon's bootstrap cookie, with no Karbon tab. It has not run on a live tenant yet. Version 0.6.1 is in Chrome Web Store review; 0.7.4 goes out automatically once that clears.
 
 ## Next step
 Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshooting, and read the Connection line: it says whether the background can reach Karbon's API without a tab. Then run one blank start, open a work item, and finish.
@@ -40,6 +40,11 @@ Reload `unpacked/production` in Chrome. Then open Preferences, then Troubleshoot
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
 
 ## Session log
+### 2026-10-23, new defaults and per-kind auto-switch (Claude Code)
+- Max chose new defaults: work auto-start after 1 second, contact reminders on, contact auto-start wait 5 seconds, auto-switch on after 1 second, resume after a pause on, badge everywhere, toolbar icon for dark themes.
+- Auto-switch is now two switches, Work and Clients, with new setting `autoSwitchContacts` (off by default).
+- Upgrades from before 0.7.11 keep the old defaults for anyone who never changed them. Bumped to 0.7.11 and rebuilt. Checked the Preferences panel with a stubbed browser page, not yet in Chrome.
+
 ### 2026-10-23, Work and Clients preferences (Claude Code)
 - Split the no-timer preference into two groups, "Work" and "Clients," each with Auto-start, Remind me, or Do nothing and its own seconds.
 - Contacts can now get a start reminder. Contact auto-start no longer depends on work-item auto-start.

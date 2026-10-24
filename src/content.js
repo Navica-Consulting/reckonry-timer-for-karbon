@@ -2,9 +2,9 @@
 // work item and contact pages: auto-start, auto-switch, or a start reminder, each through an accessible toast.
 (() => {
   const DEFAULTS = {
-    autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-    remindContacts: false, contactNudgeSeconds: 60,
-    autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
+    autoStartWork: true, workStartSeconds: 1, autoStartContacts: false, contactStartSeconds: 5,
+    remindContacts: true, contactNudgeSeconds: 60,
+    autoSwitch: true, autoSwitchContacts: false, switchSeconds: 1, remindNoTimer: false, nudgeSeconds: 60,
     noteLevel: 'auto', debugLog: false,
   };
   const pending = new Map();
@@ -136,15 +136,18 @@
     // Work items and contacts each have their own choice: auto-start, remind, or nothing.
     const canStart = isWork ? s.autoStartWork : s.autoStartContacts;
     const remind = isWork ? s.remindNoTimer : s.remindContacts;
-    const wanted = canStart || remind || (isWork && s.autoSwitch);
+    const canSwitch = switchesTo(item, s);
+    const wanted = canStart || remind || canSwitch;
     if (!wanted) return log(`${KIND[item.linkType]} opened; automation is off for it`);
     const seconds = isWork ? s.workStartSeconds : s.contactStartSeconds;
     const remindSeconds = isWork ? s.nudgeSeconds : s.contactNudgeSeconds;
-    // Contacts only take over a running timer when contact auto-start is on.
-    if (running && s.autoSwitch && (isWork || canStart)) return later(s.switchSeconds, () => autoAct(item, s, true, blankOnly));
+    if (running && canSwitch) return later(s.switchSeconds, () => autoAct(item, s, true, blankOnly));
     if (!running && canStart) return later(seconds, () => autoAct(item, s, false, blankOnly));
     if (!running && remind && !dismissed.has(key)) later(remindSeconds, () => nudge(item, s));
   }
+
+  // Auto-switch is set separately for work items and contacts.
+  const switchesTo = (item, s) => (item.linkType === 'WorkItem' ? s.autoSwitch : s.autoSwitchContacts);
 
   // The settings count from when the page opened, which includes the settle delay.
   const later = (seconds, fn) => timers.push(setTimeout(fn, Math.max(0, (Number(seconds) || 0) * 1000 - SETTLE_MS)));
@@ -203,7 +206,7 @@
         removePrompt();
         const state = await readState();
         if (!state || state.state === 'Stopped' || state.work) return; // already finished elsewhere
-        const then = cfg.autoSwitch ? await startArgs(it, { note: KTNotes.note('switchedIn', cfg.noteLevel) }) : null;
+        const then = switchesTo(it, cfg) ? await startArgs(it, { note: KTNotes.note('switchedIn', cfg.noteLevel) }) : null;
         await chrome.runtime.sendMessage({
           type: 'promptFinish', ui: 'window', reason: then ? 'switch' : 'stop',
           note: KTNotes.note(then ? 'switchedAway' : 'manualStop', cfg.noteLevel),
@@ -214,10 +217,10 @@
       document.documentElement.appendChild(promptHost);
     }
     const root = promptHost._root;
-    root.getElementById('d').textContent = s.autoSwitch
+    root.getElementById('d').textContent = switchesTo(item, s)
       ? `You opened ${title}. Choose where the time so far belongs, then the timer moves here.`
       : `You opened ${title}. Choose where the time so far belongs and save it.`;
-    root.querySelector('.go').textContent = s.autoSwitch ? 'Finish and switch here' : 'Finish timer';
+    root.querySelector('.go').textContent = switchesTo(item, s) ? 'Finish and switch here' : 'Finish timer';
   }
 
   // Clear the prompt if the timer gets a work item or stops elsewhere.

@@ -50,7 +50,7 @@ document.getElementById('openKarbon').addEventListener('click', () => chrome.tab
 
 // Toolbar icon color, also in Preferences.
 const iconPick = document.querySelectorAll('input[name="toolbarTheme"]');
-chrome.storage.sync.get({ toolbarTheme: 'light' }).then(({ toolbarTheme }) => {
+chrome.storage.sync.get({ toolbarTheme: 'dark' }).then(({ toolbarTheme }) => {
   for (const r of iconPick) r.checked = r.value === toolbarTheme;
 });
 for (const r of iconPick) r.addEventListener('change', () => chrome.storage.sync.set({ toolbarTheme: r.value }));

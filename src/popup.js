@@ -1,10 +1,10 @@
 const DEFAULTS = {
-  autoStartWork: true, workStartSeconds: 2, autoStartContacts: false, contactStartSeconds: 8,
-  remindContacts: false, contactNudgeSeconds: 60,
-    autoSwitch: false, switchSeconds: 2, remindNoTimer: false, nudgeSeconds: 60,
-  pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: false,
-  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'away', splitAtMidnight: true,
-  noteLevel: 'auto', debugLog: false, toolbarTheme: 'light',
+  autoStartWork: true, workStartSeconds: 1, autoStartContacts: false, contactStartSeconds: 5,
+  remindContacts: true, contactNudgeSeconds: 60,
+  autoSwitch: true, autoSwitchContacts: false, switchSeconds: 1, remindNoTimer: false, nudgeSeconds: 60,
+  pauseOnLock: true, idlePause: false, idleMinutes: 10, autoResume: true,
+  longTimerAlert: true, longTimerHours: 3, showIdleBadge: true, badgeWhere: 'everywhere', splitAtMidnight: true,
+  noteLevel: 'auto', debugLog: false, toolbarTheme: 'dark',
 };
 const KARBON = KT_ORIGIN;
 // Interim feedback address until a permanent one is chosen.
@@ -332,7 +332,7 @@ function updateDeps() {
     modeNudge: f.startMode.value === 'nudge',
     contactAuto: f.contactMode.value === 'auto',
     contactNudge: f.contactMode.value === 'nudge',
-    autoSwitch: f.autoSwitch.checked,
+    autoSwitch: f.autoSwitch.checked || f.autoSwitchContacts.checked,
     idlePause: f.idlePause.checked,
     anyPause: f.pauseOnLock.checked || f.idlePause.checked,
     longTimer: f.longTimerAlert.checked,
@@ -377,7 +377,7 @@ $('feedback').addEventListener('click', async () => {
     `Version: ${v}`, `Chrome: ${chromeVer}`,
     `No timer, work items: ${modeOf(s, 'startMode')} (start ${s.workStartSeconds}s, remind ${s.nudgeSeconds}s)`,
     `No timer, contacts: ${modeOf(s, 'contactMode')} (start ${s.contactStartSeconds}s, remind ${s.contactNudgeSeconds}s)`,
-    `Auto-switch: ${s.autoSwitch ? `${s.switchSeconds}s` : 'off'}`, `Long-timer alert: ${s.longTimerAlert ? `${s.longTimerHours}h` : 'off'}`,
+    `Auto-switch: work ${s.autoSwitch ? 'on' : 'off'}, contacts ${s.autoSwitchContacts ? 'on' : 'off'} (${s.switchSeconds}s)`, `Long-timer alert: ${s.longTimerAlert ? `${s.longTimerHours}h` : 'off'}`,
     `Badge: ${s.badgeWhere}`, `Notes level: ${s.noteLevel}`,
     `Settings on: ${on}`, `Work items only: ${workOnly() ? 'yes' : 'no'}`,
   ].join('\n');
