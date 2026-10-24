@@ -1,5 +1,5 @@
-# On a version tag (v0.7.5 and so on): build, attach the zips to a GitHub release, and, once the
-# store IDs are set as repository variables, upload to the Chrome Web Store and submit for review.
+# On a version tag (v0.7.5 and so on): build and attach the zips to a GitHub release. With the store
+# IDs set and CWS_AUTO_PUBLISH=true, also upload to the Chrome Web Store and submit for review.
 # Run it by hand (Actions, Release, Run workflow) for a read-only check that store sign-in works.
 # Setup steps are in docs/RELEASING.md.
 name: Release
@@ -39,7 +39,7 @@ jobs:
         run: gh release create "$GITHUB_REF_NAME" dist/*-"$VER"*.zip --title "$GITHUB_REF_NAME" --generate-notes
 
       - name: Sign in to Google Cloud
-        if: vars.CWS_ITEM_ID != ''
+        if: vars.CWS_ITEM_ID != '' && (env.IS_TAG != 'true' || vars.CWS_AUTO_PUBLISH == 'true')
         id: gcp
         uses: google-github-actions/auth@v2
         with:
@@ -49,7 +49,7 @@ jobs:
           access_token_scopes: https://www.googleapis.com/auth/chromewebstore
 
       - name: Publish to the Chrome Web Store
-        if: vars.CWS_ITEM_ID != ''
+        if: vars.CWS_ITEM_ID != '' && (env.IS_TAG != 'true' || vars.CWS_AUTO_PUBLISH == 'true')
         env:
           CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
           CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}

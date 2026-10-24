@@ -4,7 +4,7 @@
 Build stage. 0.7.31 is on `origin/main` and is the release candidate. It carries everything through the separate Client and Work fields (0.7.28), the GitHub Pages policy move (0.7.29), the error log (0.7.30), and a stale content script fix (0.7.31). Max tested 0.7.31 locally. Version 0.6.1 is in Chrome Web Store review. A scheduled task tags `v0.7.31` and submits it once 0.6.1 clears. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
 
 ## Next step
-Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7.31) to report that 0.6.1 cleared and 0.7.31 was submitted. Check the tag's Release and Privacy page runs under Actions. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
+Once 0.6.1 clears review, Max uploads the next version by hand and pastes `docs/store-privacy-tab.md` into the store's Privacy practices tab. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -15,7 +15,7 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 
 ## Open threads
 - Signed out of Karbon: 0.7.19 hides the timer when Karbon is signed out and offers a Sign in button that opens Karbon's sign-in page. 0.7.21 removed the page warning and the automatic opens (Max). It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured. Tested only with stubbed Chrome APIs (waiting on: a live sign-out test).
-- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. A scheduled task in the Claude app (`reckonry-send-074-after-approval`, every 3 hours) checks the review and, once 0.6.1 clears, tags the 0.7.31 commit as `v0.7.31` and pushes the tag, which submits 0.7.31 and republishes the policy. It no longer sends 0.7.4 or 0.7.30. It reports back and tries to disable itself; if it keeps running afterward, turn it off in the sidebar (waiting on: Google).
+- First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. On 2026-10-24 Max chose to upload the next version by hand too, and the scheduled task `reckonry-send-074-after-approval` was disabled (not deleted). Draft justifications for `cookies`, `*.karbonhq.com`, and the other permissions are in `docs/store-privacy-tab.md` (waiting on: Google, then Max).
 - Privacy policy: hosted on GitHub Pages at https://timer.reckonry.ai/privacy since 0.7.29, published from `docs/privacy-policy.md` on every version tag. The store listing points there. Effective 2026-10-24, with the feedback form and error log. It still doesn't cover the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, or Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md` (waiting on: Max).
 - Tab-free API calls: 0.7.18 runs every command from the background worker through `src/karbon.js`, shared with `page.js`. A Karbon tab is used only when Karbon can't be reached directly, and then an action reloads the tab or opens one. Max confirmed on 2026-10-24 that play works with Karbon closed and the Connection line reports tab-free timer changes. Search, recents, pause, stop, and the lock and day-end paths haven't been tried live without a tab (waiting on: Max's use).
 - Settings and help page: built on 2026-10-23 from `artifacts/settings-page-plan.md` and committed in 0.7.14. The help copy and FAQ answers are Claude's drafts, and the version is now 0.7.14 after parallel sessions; the plan suggested 0.8.0 (waiting on: Max's review).
@@ -48,6 +48,11 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-10-24, 0.7.32 release prep (Claude Code)
+- Max chose to upload by hand. Disabled the scheduled task, and the Release workflow now uploads to the store only when `CWS_AUTO_PUBLISH` is `true` (unset).
+- Drafted the Privacy practices tab text, with justifications for `cookies` and `*.karbonhq.com`, in `docs/store-privacy-tab.md`.
+- Pushed `main` and tagged `v0.7.32` for the GitHub release and the policy page. The store upload is Max's, once 0.6.1 clears.
+
 ### 2026-10-24, role and task type prefill (Claude Code)
 - Max asked to find the call behind Karbon's timer prefill. It's Karbon's own logic, read from its app code, with one server call. Details in `artifacts/capture-summary.md` under Prefill.
 - `prefill` command in `src/karbon.js`; `start` uses it when no role or task type is given. The background adds the per-work memory, last used, and list keys (`withPrefill`), and records each saved work item's role and task type (`onSaved`, relayed from Karbon tabs too).

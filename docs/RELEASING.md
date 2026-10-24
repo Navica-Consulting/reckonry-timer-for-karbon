@@ -16,10 +16,12 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
    ```
 
 5. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches the
-   manifest, builds, attaches the zips to a GitHub release, uploads the store zip, and submits it
-   for review. It goes live after approval. The Privacy page workflow publishes
-   `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy from the same tag. Check both runs
-   under Actions on GitHub.
+   manifest, builds, and attaches the zips to a GitHub release. It uploads the store zip and
+   submits it for review only when the repository variable `CWS_AUTO_PUBLISH` is `true`. It's
+   unset since 2026-10-24, so upload by hand (below) and paste
+   [store-privacy-tab.md](store-privacy-tab.md) into the Privacy practices tab. The Privacy page
+   workflow publishes `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy from the same
+   tag. Check both runs under Actions on GitHub.
 
 A new version can't be submitted while another is still in review, so wait for approval before
 tagging. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub
@@ -82,7 +84,8 @@ Federation, and the Chrome Web Store API are free, and the project needs no bill
    Optional: set `CWS_PUBLISH_TYPE` to `STAGED_PUBLISH` so an approved version waits for you to
    press Publish in the dashboard. The default, `DEFAULT_PUBLISH`, goes live after review.
 
-Until `CWS_ITEM_ID` is set, the workflow only builds and creates the GitHub release.
+Until `CWS_ITEM_ID` is set and `CWS_AUTO_PUBLISH` is `true`, a tag only builds and creates the
+GitHub release. Turn it on with `gh variable set CWS_AUTO_PUBLISH --body true`.
 
 To publish from your Mac instead, with your own Google account allowed to impersonate the
 service account:
