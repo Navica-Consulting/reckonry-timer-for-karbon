@@ -45,8 +45,15 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
 - The extension does not need to replicate either one.
 
 ## Prefill
-- The start request carries role and task type from the client side. Karbon's UI uses the user's last-used values; the server does not supply them.
+- The start request carries role and task type from the client side. Karbon's UI chooses them; the server only supplies the budget source below.
 - Lookups are available at `/tenant/api/{tenant}/userActorListItems` and `/tenant/api/{tenant}/taskTypes`. Response formats are under "Role and task type lists" below.
+- Read from Karbon's app code on 2026-10-24 (`resolvePrefillDataForMode`). Karbon prefills only when the timer has no role or task type, and again whenever a work item is picked. The firm's `timeEntryPrefillMode` picks the source:
+  - `WorkItem`: the role and task type of your last saved entry on this work item. Karbon keeps these in the browser's IndexedDB (`RecentTimeEntries`, keyed by tenant and work item) for 100 days, written on each save, even when empty.
+  - `Budget`: `GET /time/api/{tenant}/estimateActualInfos?entityPermaKey={work}&entityLinkType=WorkItem&Assignee[]={user}` returns `estimateActualInfos[]` with `actorPermaKey` and `taskTypePermaKey`. Used only when exactly one row comes back. Confirmed live with a 200 on the test tenant.
+  - `LastSelected`: `localStorage` keys `{tenant}-time-entry-role` and `{tenant}-time-entry-task-type`, written whenever you pick one in Karbon's timer.
+  - `Smart` (the test tenant's mode): those three in order, the first that gives either key. `Blank`: nothing.
+  - Karbon follows the firm's mode only with the `PrefillRoleAndTaskTypeImprovements` feature flag on; otherwise it always uses Smart.
+- Also seen: `GET /time/api/{tenant}/workItemRoleTaskTypeRestrictions?workItemPermaKey={work}` returns `{ restricted, pairs }`. Karbon calls it only when the firm's `roleTaskTypeFilterMode` is `ByWorkTasksAndBudgetEstimates`. The test tenant has it `Disabled`. The extension doesn't use it yet.
 
 ## Behavior notes
 - Only one timer can run at a time. Switching work items means stopping and saving (or discarding) first, then starting the new item.

@@ -35,6 +35,23 @@ function fillSelect(sel, list, selectedKey, noun) {
   sel.value = selectedKey && opts.some((o) => o.key === selectedKey) ? selectedKey : fallback.key;
 }
 
+// Selects a role or task type by key. No key, or one the list doesn't have, selects None (or the first choice).
+function selectKey(sel, key) {
+  const opts = [...sel.options];
+  const none = opts.find((o) => o.value === 'NONE' || o.textContent.trim() === 'None') || opts[0];
+  const hit = key && opts.find((o) => o.value === key);
+  if (hit || none) sel.value = (hit || none).value;
+}
+
+// Karbon's prefill for a work item you just picked: its own role and task type, from your last entry on it
+// or its budget. Null when Karbon has neither, so what's already chosen stays, as in Karbon's timer.
+async function workPrefill(item) {
+  if (!item || (item.linkType && item.linkType !== 'WorkItem')) return null;
+  const r = await chrome.runtime.sendMessage({ type: 'cmd', cmd: 'prefill', args: { workKey: item.key, linkType: 'WorkItem' } });
+  const p = r && r.ok && r.result;
+  return p && (p.source === 'work' || p.source === 'budget') ? p : null;
+}
+
 // A "None" choice doesn't count when the firm requires a role or task type; its ID varies by list.
 const emptySel = (sel) => !sel.value || sel.value === 'NONE' || ((sel.selectedOptions[0] || {}).textContent || '').trim() === 'None';
 

@@ -59,6 +59,16 @@ function showErrors(missing) {
 function pickWork(item) {
   if (!workOnly() && !F.client.item) fillClient(F.client, item.client);
   picked(item);
+  prefillWork(item);
+}
+
+// A work item brings its own role and task type when Karbon has them, as in Karbon's timer.
+async function prefillWork(item) {
+  const p = await workPrefill(item);
+  if (!p || F.work.item !== item) return;
+  selectKey($('role'), p.roleKey);
+  selectKey($('taskType'), p.taskTypeKey);
+  markMissing();
 }
 function pickClient(item) {
   F.work.show(null, true);

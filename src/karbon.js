@@ -1,5 +1,5 @@
 // Karbon's timer API, shared by page.js (inside a Karbon tab) and background.js (no tab needed).
-// env: { fetch, keys, route, onState, onTimeSettings, log }. keys() returns { tenant, user, base }
+// env: { fetch, keys, route, onState, onTimeSettings, onSaved, log }. keys() returns { tenant, user, base }
 // and may be async. Errors that mean Karbon couldn't be reached carry reach: true, so the
 // background knows a Karbon tab might still work.
 // eslint-disable-next-line no-unused-vars
@@ -141,6 +141,7 @@ function KTKarbon(env) {
       notesRequired: !!s.isNotesRequired,
       roleRequired: !!s.isActorRequired,
       taskTypeRequired: !!s.isTaskTypeRequired,
+      prefillMode: s.timeEntryPrefillMode || 'Smart',
     };
     if (env.onTimeSettings) env.onTimeSettings(timeCfg);
     return timeCfg;
@@ -151,8 +152,10 @@ function KTKarbon(env) {
   // description: your own text for the new entry. note: a stamped activity note added after it.
   // stopNote: written on the entry being saved, when this start switches away from another timer.
   // interactive: someone is there to answer the finish prompt, so a required note is asked for, not filled in.
+  // With no role or task type given, they're filled in the way Karbon's own timer would (see prefill).
+  // prefill: false when the caller's form already did that, so a "None" you chose stays None.
   // Returns the new timer, or { needsCompletion, missing, state } when the running timer can't be saved yet.
-  async function start({ workKey = null, linkType = 'WorkItem', roleKey, taskTypeKey, description, note, stopNote, interactive = false }) {
+  async function start({ workKey = null, linkType = 'WorkItem', roleKey, taskTypeKey, description, note, stopNote, interactive = false, prefill: fill = true, remembered, last, known }) {
     workKey = workKey || null;
     // Firms that book time to work items only can't link a timer to a contact, so it starts blank.
     if (workKey && linkType !== 'WorkItem') {
@@ -166,6 +169,9 @@ function KTKarbon(env) {
       }
       const r = await stopAndSave({ note: stopNote, interactive });
       if (r.needsCompletion) return r;
+    }
+    if (fill && !realKey(roleKey) && !realKey(taskTypeKey)) {
+      ({ roleKey, taskTypeKey } = await prefill({ workKey, linkType, remembered, last, known }));
     }
     const fresh = sw;
     const s = {
@@ -298,6 +304,10 @@ function KTKarbon(env) {
       invoicePermaKey: null, isInvoiceDeleted: false, timeSheetPermaKey: null, orgUnitPublicKey: null,
     };
     const saved = await call('POST', `/time/api/${K.tenant}/timeEntries`, { timeEntry: entry });
+    // Karbon's timer remembers each work item's last role and task type, even when they're empty.
+    if (env.onSaved && e.entityPermaKey && e.entityLinkType === 'WorkItem') {
+      env.onSaved({ workKey: e.entityPermaKey, roleKey: e.actorPermaKey, taskTypeKey: e.taskTypePermaKey });
+    }
     await putAction('Confirm');
     return {
       saved: true, minutes, entryId: saved && saved.timeEntry && saved.timeEntry.id,
@@ -356,9 +366,44 @@ function KTKarbon(env) {
     return { roles, taskTypes };
   }
 
+  // ---- Role and task type prefill ----
+  // Follows Karbon's own timer (read from its app code on 2026-10-24). The firm's prefill mode picks the source:
+  //   WorkItem: the role and task type of your last entry on this work item.
+  //   Budget: the work item's budget line, when exactly one is assigned to you.
+  //   LastSelected: your last picks anywhere. Smart: those three, in that order. Blank: nothing.
+  // remembered and last come from the extension's storage. known holds the list keys, so stale ones drop out.
+  // Returns { roleKey, taskTypeKey, source }, where source is 'work', 'budget', 'last', or null.
+  async function budgetPick(workKey) {
+    const q = new URLSearchParams({ entityPermaKey: workKey, entityLinkType: 'WorkItem', 'Assignee[]': K.user });
+    const j = await call('GET', `/time/api/${K.tenant}/estimateActualInfos?${q}`).catch(() => null);
+    const rows = (j && j.estimateActualInfos) || [];
+    return rows.length === 1 ? { roleKey: rows[0].actorPermaKey, taskTypeKey: rows[0].taskTypePermaKey } : null;
+  }
+
+  async function prefill({ workKey = null, linkType = 'WorkItem', remembered = null, last = null, known = null }) {
+    const cfg = await timeSettings().catch(() => null);
+    const mode = (cfg && cfg.prefillMode) || 'Smart';
+    const ok = (k, list) => (realKey(k) && !(list && list.length && !list.includes(k)) ? k : null);
+    const clean = (p, source) => {
+      const r = p && { roleKey: ok(p.roleKey, known && known.roles), taskTypeKey: ok(p.taskTypeKey, known && known.taskTypes), source };
+      return r && (r.roleKey || r.taskTypeKey) ? r : null;
+    };
+    const work = workKey && (linkType || 'WorkItem') === 'WorkItem' ? workKey : null;
+    const fromWork = () => (work ? clean(remembered, 'work') : null);
+    const fromBudget = async () => (work ? clean(await budgetPick(work), 'budget') : null);
+    const fromLast = () => clean(last, 'last');
+    let p = null;
+    if (mode === 'WorkItem') p = fromWork();
+    else if (mode === 'Budget') p = await fromBudget();
+    else if (mode === 'LastSelected') p = fromLast();
+    else if (mode !== 'Blank') p = fromWork() || (await fromBudget()) || fromLast();
+    log('prefill', mode, p && p.source);
+    return p || { roleKey: null, taskTypeKey: null, source: null };
+  }
+
   const COMMANDS = {
     getState, start, pause, resume, appendNote, edit, autoPause, autoResume, stopAndSave, discard,
-    search, recents, lookups, timeSettings,
+    search, recents, lookups, timeSettings, prefill,
   };
 
   // Runs one command. Timer results go out in the extension's short form.

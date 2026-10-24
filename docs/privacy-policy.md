@@ -15,6 +15,7 @@ To start, pause, and switch your Karbon timer, the extension reads and stores a 
 - Your Karbon user and firm identifiers, learned from the Karbon web app.
 - The work item or contact you have open in Karbon, including its address, title, and client name.
 - Your current timer state, default role, task type, and recent work items.
+- The role and task type you last saved on each work item, kept for 100 days, so the timer can fill them in the way Karbon does. Only Karbon's record keys are kept, not names.
 - Your extension settings.
 - Whether your computer is idle, locked, or was asleep, so the timer can pause.
 

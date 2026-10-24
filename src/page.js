@@ -84,6 +84,7 @@
     route: () => location.pathname.replace(/^\/[^/]+/, '') || '/',
     onState: (state) => post({ event: 'state', state }),
     onTimeSettings: (settings) => post({ event: 'timeSettings', settings }),
+    onSaved: (pick) => post({ event: 'saved', pick }),
     log,
   });
 

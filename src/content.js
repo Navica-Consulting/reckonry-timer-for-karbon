@@ -40,6 +40,10 @@
       chrome.storage.local.set({ timeCfg: m.settings }).catch(() => {});
       return;
     }
+    if (m.event === 'saved') {
+      chrome.runtime.sendMessage({ type: 'workPick', pick: m.pick }).catch(() => {});
+      return;
+    }
     const p = pending.get(m.id);
     if (!p) return;
     clearTimeout(p.timer);
@@ -209,9 +213,10 @@
   // The settings count from when the page opened, which includes the settle delay.
   const later = (seconds, fn) => timers.push(setTimeout(fn, Math.max(0, (Number(seconds) || 0) * 1000 - SETTLE_MS)));
 
+  // The background adds what start needs to fill in the role and task type the way Karbon's own timer would.
   async function startArgs(item, extra) {
-    const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
-    return { workKey: item.key, linkType: item.linkType, roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, ...extra };
+    const args = { workKey: item.key, linkType: item.linkType, ...extra };
+    return (await chrome.runtime.sendMessage({ type: 'prefillArgs', args }).catch(() => null)) || args;
   }
 
   // Karbon's tab title starts with the item's name.

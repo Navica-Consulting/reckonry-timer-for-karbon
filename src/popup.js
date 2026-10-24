@@ -12,6 +12,7 @@ let notesTimer = null;   // pending save of the notes field
 let timeCfg = null;      // the firm's time settings: { workOnly, notesRequired }
 let tick = null;
 let lists = null;        // role and task type lists: { roles, taskTypes }
+let picks = null;        // the start form's role and task type, once prefilled or chosen: { roleKey, taskTypeKey }
 let signedOut = false;   // Karbon says this browser is signed out
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
@@ -205,12 +206,11 @@ $('stop').addEventListener('click', async () => {
   refresh();
 });
 
-// Swap: save this timer, then start a blank one with your last-used role and task type.
+// Swap: save this timer, then start a blank one with the role and task type Karbon would prefill.
 $('swap').addEventListener('click', async () => {
   const res = await saveCurrent();
   if (!res) return;
-  const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
-  const r = await send('start', { workKey: null, linkType: null, roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: await noteFor('manualStart'), interactive: true });
+  const r = await send('start', { workKey: null, linkType: null, note: await noteFor('manualStart'), interactive: true });
   if (!r || !r.ok) { refresh(); return sayError(r); }
   await refresh();
 });
@@ -252,8 +252,13 @@ $('curRole').addEventListener('change', () => editCurrent({ roleKey: $('curRole'
 $('curTask').addEventListener('change', () => editCurrent({ taskTypeKey: $('curTask').value || null }));
 
 // The timer is on its work item, or else its client. Clearing both leaves it blank.
+// A work item brings its own role and task type when Karbon has them, as in Karbon's timer.
 async function setEntity(item) {
-  return editCurrent(item ? { workKey: item.key, linkType: item.linkType || 'WorkItem' } : { workKey: null });
+  if (!item) return editCurrent({ workKey: null });
+  const args = { workKey: item.key, linkType: item.linkType || 'WorkItem' };
+  const p = await workPrefill(item);
+  if (p) Object.assign(args, { roleKey: p.roleKey, taskTypeKey: p.taskTypeKey });
+  return editCurrent(args);
 }
 
 // Notes save a moment after you stop typing, and when you leave the field.
@@ -292,7 +297,7 @@ function buildFields() {
     onPick: () => { start.work.show(null, true); $('role').focus(); },
     onClear: () => start.work.show(null, true) });
   start.work = pickField($('workField'), { id: 'work', label: ['Work ', opt], kind: 'work', onError: sayError, describedBy: 'qHint',
-    scope: scopeOf(start), onPick: (it) => { pickedWork(start, it); $('role').focus(); } });
+    scope: scopeOf(start), onPick: (it) => { pickedWork(start, it); prefillWork(it); $('role').focus(); } });
   cur.client = pickField($('curClientField'), { id: 'curClient', label: 'Client', kind: 'contact', onError: sayError,
     onPick: (it) => { cur.work.show(null, true); setEntity(it); },
     onClear: () => { cur.work.show(null, true); setEntity(null); } });
@@ -318,11 +323,13 @@ async function startChosen() {
   startNew(item);
 }
 
+// The form's role and task type go as shown, so a None you chose stays None.
+// Before the lists load, the background prefills them instead.
 async function startArgs(item) {
-  const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
+  const shown = $('role').value && $('taskType').value;
   return {
     workKey: item ? item.key : null, linkType: item ? item.linkType || 'WorkItem' : null,
-    roleKey: $('role').value || d.roleKey, taskTypeKey: $('taskType').value || d.taskTypeKey,
+    ...(shown ? { roleKey: $('role').value, taskTypeKey: $('taskType').value, prefill: false } : {}),
     description: $('desc').value,
     note: await noteFor('manualStart'),
   };
@@ -354,17 +361,39 @@ async function rememberPicks() {
 $('go').addEventListener('click', startChosen);
 
 // ---- Role and task type ----
-// Filled from Karbon's lists (cached, so they show without a Karbon tab) and preset to your last-used values.
+// Filled from Karbon's lists (cached, so they show without a Karbon tab) and preset the way Karbon's timer
+// prefills them: by the firm's prefill mode, then by the work item you pick.
+function setPicks(p) {
+  picks = { roleKey: p.roleKey || null, taskTypeKey: p.taskTypeKey || null };
+  selectKey($('role'), picks.roleKey);
+  selectKey($('taskType'), picks.taskTypeKey);
+}
+const keepPicks = () => { picks = { roleKey: $('role').value || null, taskTypeKey: $('taskType').value || null }; };
+$('role').addEventListener('change', keepPicks);
+$('taskType').addEventListener('change', keepPicks);
+
+// With no work item chosen yet.
+async function prefillBlank() {
+  const r = await send('prefill', { workKey: null });
+  if (r && r.ok && r.result && !start.work.item && !picks) setPicks(r.result);
+}
+
+async function prefillWork(item) {
+  const p = await workPrefill(item);
+  if (p && start.work.item === item) setPicks(p);
+}
+
 async function loadLookups() {
   const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey', 'lookups']);
   const paint = (lk) => {
     lists = lk || null;
     if (isActive(current)) renderDetails(current);
-    fillSelect($('role'), (lk && lk.roles) || [], $('role').value || d.roleKey, 'role');
-    fillSelect($('taskType'), (lk && lk.taskTypes) || [], $('taskType').value || d.taskTypeKey, 'task type');
+    fillSelect($('role'), (lk && lk.roles) || [], picks ? picks.roleKey : $('role').value || d.roleKey, 'role');
+    fillSelect($('taskType'), (lk && lk.taskTypes) || [], picks ? picks.taskTypeKey : $('taskType').value || d.taskTypeKey, 'task type');
   };
   paint(d.lookups);
   if (!(await chrome.runtime.sendMessage({ type: 'canReach' }))) return;
+  prefillBlank();
   const r = await send('lookups');
   if (!r || !r.ok || !r.result) return;
   const lk = {

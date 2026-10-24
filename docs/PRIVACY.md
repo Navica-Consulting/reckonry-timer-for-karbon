@@ -35,7 +35,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.14)
+## Data inventory (as of 0.7.31)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -44,6 +44,8 @@ or taken down:
 | Current timer state, auto-pause reason | Karbon stopwatch API | `storage.session` | Sent to Karbon only |
 | Open work item or contact (address, title, client) | Karbon page | Memory, recents | No |
 | Roles, task types, last-used role and task type | Karbon API | `storage.local` | No |
+| Last saved role and task type per work item (keys only, 100 days, at most 300 work items) | Extension, from entries it saves | `storage.local` (`workPicks`) | No |
+| Work item budget role and task type, for prefill | Karbon `estimateActualInfos` API | Not stored | No |
 | Firm time settings (work-only, notes required) | Karbon API | `storage.local` | No |
 | Settings, including the toolbar icon color (0.7.5), contact reminders (0.7.7), and contact auto-switch (0.7.11) | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
@@ -108,6 +110,17 @@ the email draft, and Copy details for support, where the user can read, edit, or
 sending. No new permissions, host access, or network calls. The policy's Feedback section now says
 recent errors are included.
 
+Role and task type prefill review (2026-10-24, 0.7.31): starts now fill in the role and task type
+the way Karbon's own timer does, following the firm's prefill mode. One new `storage.local` key,
+`workPicks`, keeps the role and task type keys of the last entry the extension saved on each work
+item, with the time. Entries older than 100 days drop out, it holds at most 300 work items, and it
+is cleared when another Karbon user signs in on the browser. It holds record keys only, never names.
+Karbon keeps the same thing in its own browser storage, which the extension doesn't read. One new
+read call to an existing destination: `GET /time/api/{tenant}/estimateActualInfos` for the work
+item's budget line assigned to you. Nothing from it is stored. The firm's `timeEntryPrefillMode` is
+read from the time settings call the extension already makes. No new permissions or host access.
+The policy's list of what the extension handles now names the per-work-item memory.
+
 ## Hosting setup (done 2026-10-24)
 
 GitHub Pages is on for this repository, public, built by Actions, with the custom domain
@@ -137,3 +150,4 @@ Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover y
 |---|---|---|
 | 2026-10-23 | 0.7.1 | First published policy. |
 | 2026-10-24 | 0.7.30 | Feedback opens a Google Form with recent errors. Moved to timer.reckonry.ai/privacy. |
+| 2026-10-24 | 0.7.31 | Names the per-work-item role and task type memory used for prefill. |

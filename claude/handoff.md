@@ -32,6 +32,7 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it; Microsoft publisher verification would be needed first (waiting on: Max).
 - Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a concrete playbook offer with the newsletter invite, separate update and newsletter opt-ins); Max to review. Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
 - Client and Work fields: 0.7.28 scopes Work to the chosen client by matching the client's name, since Karbon gives a work item's client by name only. It filters up to 25 results, so a common search term can miss some of that client's work, and a client group's work may not match. Capturing the call behind a client's Work tab in Karbon would make it exact. A client filled in from a work item gets its key by an exact name search (waiting on: a capture session).
+- Role and task type prefill: 0.7.31 fills them in the way Karbon's timer does, by the firm's prefill mode: last entry on the work item (the extension's own `workPicks` memory), then the work item's budget line (`estimateActualInfos`), then last used. Logic tested against a stubbed Karbon; the budget call confirmed live, read-only. The extension still learns "last used" from any running timer, so a budget prefill can become last used, which Karbon's own Last selected wouldn't do. Not loaded in Chrome yet (waiting on: Max's test).
 - Feedback form: Send feedback opens a Google Form, committed in 0.7.30 and tested by Max locally. Confirm in the form's own settings that "Restrict to users in Navica LLC" is off and the "Pease add more details" typo is fixed, and remove the `feedback-preview` entry from `.claude/launch.json` (waiting on: Max).
 - Error log and stale content scripts: 0.7.26 keeps the last 15 extension errors in `storage.local` (`errorLog`, in `src/errors.js`) and adds them to the feedback form's Logs field, the email draft, and Copy details. `content.js` now stops quietly after the extension reloads, instead of throwing "Extension context invalidated". Committed as 0.7.30 together with the feedback-form and finish-form changes that shared the working tree. Max tested it locally (waiting on: nothing).
 
@@ -46,6 +47,12 @@ Wait for the scheduled task (`reckonry-send-074-after-approval`, now sending 0.7
 - 2026-10-24: Skip 0.7.4. The first update after 0.6.1 is 0.7.30 (Max).
 
 ## Session log
+### 2026-10-24, role and task type prefill (Claude Code)
+- Max asked to find the call behind Karbon's timer prefill. It's Karbon's own logic, read from its app code, with one server call. Details in `artifacts/capture-summary.md` under Prefill.
+- `prefill` command in `src/karbon.js`; `start` uses it when no role or task type is given. The background adds the per-work memory, last used, and list keys (`withPrefill`), and records each saved work item's role and task type (`onSaved`, relayed from Karbon tabs too).
+- The start form, timer card, and finish form apply a work item's own role and task type when you pick it. The page, shortcut, and Swap starts prefill in the background.
+- Privacy review in `docs/PRIVACY.md`; the policy names the new memory. Built as 0.7.31. Not committed.
+
 ### 2026-10-24, privacy policy on GitHub Pages and 0.7.30 (Claude Code)
 - Max asked to host the policy on GitHub Pages with the domain `timer.reckonry.ai/privacy`. Pages is on, public, with the domain verified and HTTPS enforced. Max set the Cloudflare DNS, verified the domain, and changed the store URL.
 - New `.github/workflows/privacy-page.yml` and `scripts/privacy-page.sh`: on each `v*` tag, or by hand, they render `docs/privacy-policy.md` with GitHub's Markdown API and deploy it. The `github-pages` environment allows `main` and `v*` tags. A manual run published it and the page checked out.

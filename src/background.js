@@ -124,7 +124,41 @@ const direct = KTKarbon({
   keys: () => chrome.storage.local.get(['tenant', 'user', 'base']),
   onState: (state) => { handleState(state).catch(() => {}); },
   onTimeSettings: (timeCfg) => { chrome.storage.local.set({ timeCfg }).catch(() => {}); },
+  onSaved: (pick) => { rememberWorkPick(pick).catch(() => {}); },
 });
+
+// ---- Role and task type per work item ----
+// Like Karbon's own timer: each work item's last saved role and task type, kept 100 days.
+// Only keys are stored, never names. Karbon keeps its copy in the browser, which the extension can't read.
+const PICK_MS = 100 * 864e5;
+const PICK_MAX = 300;
+let picking = Promise.resolve();
+function rememberWorkPick({ workKey, roleKey, taskTypeKey }) {
+  picking = picking.then(async () => {
+    const { workPicks = {} } = await chrome.storage.local.get('workPicks');
+    const now = Date.now();
+    const kept = Object.entries(workPicks)
+      .filter(([k, v]) => k !== workKey && v && v.at > now - PICK_MS)
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, PICK_MAX - 1);
+    const pick = { roleKey: roleKey || null, taskTypeKey: taskTypeKey || null, at: now };
+    await chrome.storage.local.set({ workPicks: Object.fromEntries([[workKey, pick], ...kept]) });
+  }).catch(() => {});
+  return picking;
+}
+
+// What start and prefill need to choose a role and task type the way Karbon does.
+async function withPrefill(args = {}) {
+  const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey', 'workPicks', 'lookups']);
+  const p = args.workKey && d.workPicks && d.workPicks[args.workKey];
+  const lk = d.lookups || {};
+  return {
+    ...args,
+    remembered: p && p.at > Date.now() - PICK_MS ? p : null,
+    last: { roleKey: d.roleKey, taskTypeKey: d.taskTypeKey },
+    known: { roles: (lk.roles || []).map((x) => x.key), taskTypes: (lk.taskTypes || []).map((x) => x.key) },
+  };
+}
 
 // Karbon tabs, the one in front first, then the most recently used.
 async function karbonTabs() {
@@ -173,6 +207,7 @@ const WRITES = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'a
 // SIGNED_OUT means Karbon says this browser is signed out. No tab is opened for it.
 // Failures are kept for the feedback form. Signed out is a state, not an error.
 async function toKarbon(cmd, args) {
+  if (cmd === 'start' || cmd === 'prefill') args = await withPrefill(args);
   const r = await toKarbonOnce(cmd, args);
   if (!r.ok && r.code !== 'SIGNED_OUT') ktRecordError(cmd, r.error);
   return r;
@@ -349,6 +384,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     handleState(msg.state);
     return false;
   }
+  if (msg.type === 'prefillArgs') {
+    withPrefill(msg.args).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'workPick') {
+    if (msg.pick && msg.pick.workKey) rememberWorkPick(msg.pick);
+    return false;
+  }
   if (msg.type === 'cmd') {
     toKarbon(msg.cmd, msg.args).then(sendResponse);
     return true;
@@ -428,7 +471,7 @@ async function handleState(state) {
 }
 
 // ---- Keyboard shortcut: start, pause, or resume from anywhere ----
-// With no timer running, it starts a blank timer with your last-used role and task type.
+// With no timer running, it starts a blank timer, with the role and task type Karbon would prefill.
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'toggle-timer') return;
   // Signed out: nothing to toggle. The badge already says so.
@@ -436,8 +479,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   const cfg = await settings();
   const s = await cachedState();
   if (!active(s)) {
-    const d = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
-    await toKarbon('start', { roleKey: d.roleKey, taskTypeKey: d.taskTypeKey, note: KTNotes.note('manualStart', cfg.noteLevel) });
+    await toKarbon('start', { note: KTNotes.note('manualStart', cfg.noteLevel) });
     return;
   }
   const cmd = s.state === 'Started' ? 'pause' : 'resume';
@@ -613,7 +655,7 @@ async function learnAccount(fromPage = null) {
   const keep = { tenant: k.tenant, user: k.user };
   if (k.base) keep.base = k.base;
   // Someone else signed in on this browser: last-used role and task type belonged to the old user.
-  if (prev.user && prev.user !== k.user) await chrome.storage.local.remove(['roleKey', 'taskTypeKey', 'lookups']);
+  if (prev.user && prev.user !== k.user) await chrome.storage.local.remove(['roleKey', 'taskTypeKey', 'workPicks', 'lookups']);
   await chrome.storage.local.set(keep);
   const { firmName, signedOut, ...direct } = await sessionCheck(k);
   if (firmName) keep.firmName = firmName;
