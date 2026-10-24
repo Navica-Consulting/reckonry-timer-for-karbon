@@ -1,5 +1,9 @@
 # Releasing
 
+Store item ID: `gnkfhgggnmdfpddfghlhjdmailhbigde`
+Publisher ID: `967ac224-b69a-4e8d-913c-74c12ebee2c5`
+Developer Dashboard: https://chrome.google.com/webstore/devconsole
+
 1. Bump `version` in `src/manifest.json`. The store rejects an upload with an unchanged version.
 2. Run `./build.sh`, then Reload both unpacked builds and test against stage and production.
 3. If permissions, host access, storage, or network calls changed, do the review in
@@ -12,8 +16,13 @@
    ```
 
 5. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches the
-   manifest, builds, and attaches the zips to a GitHub release. Once the store is set up (below),
-   it also uploads the production zip and submits it for review. The stage zip is never uploaded.
+   manifest, builds, and attaches the zips to a GitHub release.
+6. Download `reckonry-timer-for-karbon-<version>.zip` from that release (or use `dist/`), and
+   upload it in the Developer Dashboard under Package. Never upload the `-stage` zip. Submit for
+   review. A new version can't be submitted while another is still in review.
+
+Store upload is manual by choice. The optional automation below is off until its repository
+variables are set.
 
 ## Before the first public release
 
@@ -22,10 +31,12 @@
   Store listing and Privacy tabs filled in. After that, the workflow can upload and publish.
 - Privacy tab changes, such as a justification for a new permission, are always made by hand.
 
-## One-time store automation setup
+## Optional: automatic store upload (not set up)
 
-The workflow signs in to Google Cloud with Workload Identity Federation, so no service account
-key is stored anywhere. Only this repository can use it.
+The workflow can also upload and submit for review. It signs in to Google Cloud with Workload
+Identity Federation, so no service account key is stored anywhere, and only this repository can
+use it. Nothing is stored in Google Cloud and nothing bills: service accounts, Workload Identity
+Federation, and the Chrome Web Store API are free, and the project needs no billing account.
 
 1. In a Google Cloud project, run (set `PROJECT_ID` first):
 
