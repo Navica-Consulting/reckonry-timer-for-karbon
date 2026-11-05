@@ -8,6 +8,8 @@ let workOnly = false;
 
 // ---- Setup checklist ----
 // Step 2 reads Karbon's sign-in through the background worker; no Karbon tab is needed.
+// If that finds nothing, the background opens Karbon in a background tab once per visit to look.
+let probe = 'not yet';   // 'not yet', 'running', or 'done'
 async function karbonStatus() {
   // Ask the background to re-read the sign-in at most every 10 seconds, so signing in elsewhere is picked up.
   if (Date.now() - lastCheck > 10000) {
@@ -15,7 +17,13 @@ async function karbonStatus() {
     await chrome.runtime.sendMessage({ type: 'learnAccount' }).catch(() => null);
   }
   const k = await chrome.storage.local.get(['signedIn', 'user', 'firmName']);
-  return { done: !!(k.signedIn && k.user), firm: k.firmName || null };
+  const done = !!(k.signedIn && k.user);
+  if (!done && probe === 'not yet') {
+    probe = 'running';
+    chrome.runtime.sendMessage({ type: 'probeKarbon' }).catch(() => null)
+      .finally(() => { probe = 'done'; check(); });
+  }
+  return { done, firm: k.firmName || null, looking: !done && probe === 'running' };
 }
 
 const STEPS = {
@@ -48,10 +56,10 @@ async function check() {
     const done = r.done === true;
     li.classList.toggle('done', done);
     li.querySelector('.mark').textContent = done ? '✓' : String(ids.indexOf(id) + 1);
-    const text = done ? DONE_TEXT[id](r) : r.done === null ? '' : TODO_TEXT[id];
+    const text = done ? DONE_TEXT[id](r) : r.done === null ? '' : r.looking ? 'Looking for your Karbon sign-in.' : TODO_TEXT[id];
     const status = li.querySelector('.status');
     if (status.textContent !== text) status.textContent = text;
-    if (id === 'karbon') $('openKarbon').hidden = done;
+    if (id === 'karbon') $('openKarbon').hidden = done || !!r.looking;
   }
   // Once pinned and connected, the steps fold into one line so returning visitors land on settings.
   const ready = res.pin.done !== false && res.karbon.done === true;

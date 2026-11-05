@@ -48,6 +48,18 @@ Once 0.6.1 clears review, Max uploads the next version by hand and pastes `docs/
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-10-24, toasts get a dismiss X (Claude Code)
+- Max asked for a way to dismiss toasts. 0.7.35: every toast has an X at the top right, and Escape closes it while focus is in the toast. Both act like Cancel or Not now, so a countdown doesn't fire and a dismissed reminder stays dismissed for that item. The finish prompt is unchanged, since it waits for an answer by design.
+- Built, not committed, and not tested in Karbon (waiting on: Max's test, together with the 0.7.34 probe check).
+
+### 2026-10-24, setup page looks for Karbon in a background tab (Claude Code)
+- Max reported that the setup page doesn't see Karbon when it first loads, and asked it to check in a background tab instead of asking the person to sign in.
+- 0.7.33: when step 2 finds no account, the page asks the background once per visit (`probeKarbon` in `background.js`). It opens Karbon's home page in an unfocused tab, waits until the account is known, the tab reports signed out, or about 15 seconds pass, then closes the tab. The step says "Looking for your Karbon sign-in." and hides Sign in meanwhile.
+- No privacy review needed: no new permissions, storage keys, destinations, or data read. The step's help text says it may open a background tab.
+- Max tested 0.7.33: the tab opened and closed quickly and found Navica LLC, but the Connection line said "Account read from a Karbon tab; cookie: url: 3 cookies; domain: 14 cookies".
+- Checked cookie names in Max's Chrome (names only): `bootstrap-cookie-prod` is present on `.karbonhq.com`, not partitioned, with a 7-day life that a page load doesn't renew. So the read logic matches. Most likely the cookie had expired and the probe closed the tab before Karbon wrote it again.
+- 0.7.34: the probe now waits for the cookie, or up to about 4.5 seconds after the page reports keys. Built, not committed, and not loaded in Chrome (waiting on: Max's test, which should then show no "Account read from a Karbon tab").
+
 ### 2026-10-24, 0.7.32 release prep (Claude Code)
 - Max chose to upload by hand. Disabled the scheduled task, and the Release workflow now uploads to the store only when `CWS_AUTO_PUBLISH` is `true` (unset).
 - Drafted the Privacy practices tab text, with justifications for `cookies` and `*.karbonhq.com`, in `docs/store-privacy-tab.md`.

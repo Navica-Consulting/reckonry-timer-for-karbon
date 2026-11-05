@@ -114,6 +114,10 @@
     .brand svg{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .pill{margin-left:auto;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--muted)}
     .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)}
+    .brand button.x{margin:-4px -6px -4px 4px;padding:3px;border:0;border-radius:6px;background:none;color:var(--muted);line-height:0}
+    .brand>svg+button.x{margin-left:auto}
+    .brand button.x:hover{background:var(--soft);color:var(--fg)}
+    .brand .x svg{stroke:currentColor;stroke-width:2}
     h2{font-size:15px;margin:0 0 2px} p{margin:0}
     .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
     button{font:inherit;font-weight:600;border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap;
@@ -125,14 +129,16 @@
     .c:hover .bar,.c:focus-within .bar{animation-play-state:paused}
     @keyframes drain{to{transform:scaleX(0)}}`;
   const STOPWATCH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3h4M18.5 6.5l1.5-1.5"/></svg>';
+  const CLOSE = '<button type="button" class="x" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg></button>';
 
   // Builds a card host. pill: { text, tone } shown at the top right, like the panel's status pill.
-  function makeCard({ where = 'bottom', role, pill, body }) {
+  // close adds an X button at the top right.
+  function makeCard({ where = 'bottom', role, pill, body, close }) {
     const host = document.createElement('div');
     const root = host.attachShadow({ mode: 'closed' });
     const tag = pill ? `<span class="pill ${pill.tone || ''}">${pill.text}</span>` : '';
     root.innerHTML = `<style>${CARD_CSS}</style>
-      <div class="c ${where}" ${role}><div class="brand">${STOPWATCH}Reckonry Timer${tag}</div>${body}</div>`;
+      <div class="c ${where}" ${role}><div class="brand">${STOPWATCH}Reckonry Timer${tag}${close ? CLOSE : ''}</div>${body}</div>`;
     host._root = root;
     document.documentElement.appendChild(host);
     return host;
@@ -327,6 +333,7 @@
   // ---- Accessible toast ----
   // countdown: acts unless cancelled. confirm: acts only if the button is pressed. info: message only.
   // The bar drains over the toast's time and pauses while the pointer or focus is on it.
+  // The X and Escape (while focus is in the toast) dismiss it, the same as Cancel or Not now.
   let toastHost = null;
   let toastDone = null;
   function removeToast() {
@@ -343,7 +350,7 @@
         ? `<button type="button" class="go primary">${confirmLabel}</button><button type="button" class="no">Not now</button>`
         : `<button type="button" class="no">${mode === 'info' ? 'Dismiss' : 'Cancel'}</button>`;
       toastHost = makeCard({
-        role: 'role="status" aria-live="polite"', pill,
+        role: 'role="status" aria-live="polite"', pill, close: true,
         body: `<p class="msg"></p><div class="row">${buttons}</div><span class="bar"></span>`,
       });
       const root = toastHost._root;
@@ -373,6 +380,8 @@
         if (now !== left && mode === 'countdown') { left = now; render(); }
       }, 200);
       root.querySelector('.no').addEventListener('click', () => finish(false));
+      root.querySelector('.x').addEventListener('click', () => finish(false));
+      root.addEventListener('keydown', (e) => { if (e.key === 'Escape') finish(false); });
       const go = root.querySelector('.go');
       if (go) go.addEventListener('click', () => finish(true));
     });

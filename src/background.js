@@ -300,6 +300,38 @@ async function openSignIn() {
   }
 }
 
+// The setup page's first look: right after install the cookie is often unreadable and no Karbon
+// tab has the content script yet. A short-lived background tab lets Karbon boot and report its keys.
+let probing = null;
+let probe = { tabId: null, out: false };
+function probeKarbon() {
+  if (!probing) probing = probeKarbonOnce().finally(() => { probing = null; probe = { tabId: null, out: false }; });
+  return probing;
+}
+
+async function probeKarbonOnce() {
+  const { tenant } = await chrome.storage.local.get('tenant');
+  const tab = await chrome.tabs.create({ url: tenant ? `${KARBON}${tenant}/` : KARBON, active: false });
+  probe = { tabId: tab.id, out: false };
+  try {
+    // Karbon rewrites its bootstrap cookie (7-day life, not renewed on load) while it boots, after
+    // the page already knows the keys. Stop once the cookie is back, a few seconds after the page
+    // reports keys, or when the tab says signed out. Karbon's sign-in page may be on another host
+    // with no content script, so give up after about 15 seconds.
+    let keysAt = null;
+    for (let i = 0; i < 20 && !probe.out; i++) {
+      await sleep(750);
+      if (await readBootstrapCookie()) break;
+      const k = await chrome.storage.local.get(['user', 'signedIn']);
+      if (k.user && k.signedIn && keysAt === null) keysAt = i;
+      if (keysAt !== null && i - keysAt >= 6) break;
+    }
+  } finally {
+    await chrome.tabs.remove(tab.id).catch(() => {});
+  }
+  return learnAccount();
+}
+
 // Karbon's page for each kind of timer target.
 const PATHS = { WorkItem: 'work', Contact: 'contacts', Organization: 'organizations', ClientGroup: 'client-groups' };
 
@@ -379,7 +411,7 @@ async function discardTimer() {
 }
 
 // ---- Messages ----
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'state') {
     handleState(msg.state);
     return false;
@@ -401,6 +433,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'pageSignedOut') {
+    if (sender.tab && sender.tab.id === probe.tabId) probe.out = true;
     confirmSignedOut().then(sendResponse, () => sendResponse(false));
     return true;
   }
@@ -434,6 +467,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === 'pageKeys') {
     learnAccount(msg.keys).then(sendResponse, () => sendResponse({ signedIn: false }));
+    return true;
+  }
+  if (msg.type === 'probeKarbon') {
+    probeKarbon().then(sendResponse, () => sendResponse({ signedIn: false }));
     return true;
   }
   if (msg.type === 'learnAccount') {
