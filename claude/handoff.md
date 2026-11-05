@@ -1,14 +1,17 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Build stage. 0.7.31 is on `origin/main` and is the release candidate. It carries everything through the separate Client and Work fields (0.7.28), the GitHub Pages policy move (0.7.29), the error log (0.7.30), and a stale content script fix (0.7.31). Max tested 0.7.31 locally. Version 0.6.1 is in Chrome Web Store review. A scheduled task tags `v0.7.31` and submits it once 0.6.1 clears. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
+Build stage. 0.7.35 is on `origin/main` (commit `e28f2e0`) and is the release candidate. The newest tag is `v0.7.32`; 0.7.33 through 0.7.35 are untagged. Max is testing 0.7.35 as an unpacked build on his Linux machine, starting 2026-11-05. Version 0.6.1 was in Chrome Web Store review as of 2026-10-24; whether it has cleared isn't recorded. The scheduled store submission task is disabled, and uploads are by hand. The privacy policy is live at https://timer.reckonry.ai/privacy (effective 2026-10-24).
 
 ## Next step
-Once 0.6.1 clears review, Max uploads the next version by hand and pastes `docs/store-privacy-tab.md` into the store's Privacy practices tab. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
+Max tests 0.7.34 (the setup probe waits for the bootstrap cookie) and 0.7.35 (toast dismiss X and Escape) in Chrome. Then check whether 0.6.1 cleared review. If it has, tag `v0.7.35`, upload `dist/reckonry-timer-for-karbon-0.7.35.zip` by hand, and paste `docs/store-privacy-tab.md` into the store's Privacy practices tab. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
 - `build.sh` rebuilds `unpacked/production` (app2.karbonhq.com, the production candidate) and `unpacked/stage` (webapp-stage.karbonhq.com, never published) in place, so Chrome only needs Reload. It also writes versioned zips to `dist/`. Git ignores both.
+- The stage build is the same extension pointed at Karbon's own stage environment. It is not a pre-release of the extension.
+- Load unpacked takes `unpacked/production`, never `dist/` (zips only, no manifest). After a rebuild, click Reload on the extension, then refresh open Karbon tabs so they get the new content scripts.
+- Two checkouts: Max's Karbon Mac (`Documents/Projects/Reckonry Timer for Karbon`, synced to OneDrive) and his Linux machine (`~/Documents/Dev Projects/reckonry-timer-for-karbon`, cloned 2026-11-05). GitHub is the only way to move code between them. The OneDrive connector can't read `.js` files. Pull before starting work on either machine.
 - `build.sh` overwrites files and never removes them. A file dropped from `src/` must be removed from the unpacked folders by hand.
 - Git: GitHub repo Navica-Consulting/reckonry-timer-for-karbon, branch `main`. Every version is tagged `v<version>`.
 - Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review. It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
@@ -48,6 +51,12 @@ Once 0.6.1 clears review, Max uploads the next version by hand and pastes `docs/
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-11-05, Linux checkout and unpacked build (Claude Code)
+- Max asked to make sure the extension is tracked. It already had this repo. The Mac had 0.7.33 through 0.7.35 built but not committed; Max pushed them from the Mac as `e28f2e0`.
+- Cloned to `~/Documents/Dev Projects/reckonry-timer-for-karbon` on the Linux machine and ran `build.sh`. Chrome there is a Flatpak with access to `~/Documents`, so Load unpacked works from the project folder.
+- Max loaded `unpacked/production` and is testing 0.7.35 (waiting on: Max's test of 0.7.34 and 0.7.35).
+- No source changes. Nothing tagged or uploaded.
+
 ### 2026-10-24, toasts get a dismiss X (Claude Code)
 - Max asked for a way to dismiss toasts. 0.7.35: every toast has an X at the top right, and Escape closes it while focus is in the toast. Both act like Cancel or Not now, so a countdown doesn't fire and a dismissed reminder stays dismissed for that item. The finish prompt is unchanged, since it waits for an answer by design.
 - Built, not committed, and not tested in Karbon (waiting on: Max's test, together with the 0.7.34 probe check).
