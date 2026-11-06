@@ -6,7 +6,7 @@ Build stage. 0.7.35 is on `origin/main` (commit `e28f2e0`) and is the release ca
 ## Next step
 Max tests 0.7.34 (the setup probe waits for the bootstrap cookie) and 0.7.35 (toast dismiss X and Escape) in Chrome. Then check whether 0.6.1 cleared review. If it has, tag `v0.7.35`, upload `dist/reckonry-timer-for-karbon-0.7.35.zip` by hand, and paste `docs/store-privacy-tab.md` into the store's Privacy practices tab. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
-Also: 0.7.36 adds shortcut buttons (built, tested with stubbed Chrome APIs only, not committed). See the session log.
+Also: 0.7.36 added shortcut buttons (committed `421748e`, not pushed). 0.7.37 renames them presets and splits each into apply and switch halves (built, tested with stubbed Chrome APIs only). See the session log.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -54,6 +54,13 @@ Also: 0.7.36 adds shortcut buttons (built, tested with stubbed Chrome APIs only,
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-11-05, presets (Claude Code)
+- Max found it unclear that a button ends the timer and starts a new one, and asked for the name "presets."
+- Renamed to presets everywhere (`src/presets.js`, storage key `presets`, settings card `#g-presets`). 0.7.36's `shortcuts` key moves over once on load.
+- On a running timer each preset is a split button: the name changes this timer, and the swap icon saves it and starts a new one. A short hint under them says so. The one-minute fill-in rule is gone.
+- Max reported no reminder on a client page. Not changed: a reminder only shows with no timer running, after the 60-second default wait, with the Karbon tab focused the whole time. Waiting on Max's retest with Diagnostic logging on.
+- Built as 0.7.37.
+
 ### 2026-11-05, shortcut buttons (Claude Code)
 - Max asked for one-click buttons that carry a role and task type, to move one work item's time between stages like pre-session, session, and post-session.
 - New `src/shortcuts.js` (storage and labels). The panel shows a Shortcuts row in the timer card and the start form, with an Edit link. The settings page has a Shortcut buttons card under Auto-switch. The TOC's keyboard link is now "Keyboard shortcuts" to avoid a clash.

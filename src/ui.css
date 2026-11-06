@@ -149,10 +149,22 @@ input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:v
 /* Armed: the first press fills the button red; a second press confirms. */
 .icon.danger.armed, .icon.danger.armed:hover { background:#b42318; color:#fff; }
 @media (prefers-color-scheme: dark) { .icon.danger.armed, .icon.danger.armed:hover { background:#ff8a80; color:#1b1f24; } }
-/* Shortcut buttons: one click sets a role and task type. The one in use shows filled. */
-.shortcuts { display:flex; flex-wrap:wrap; gap:6px; }
+/* Presets: one click sets a role and task type. On a running timer each is split in two:
+   the name changes this timer, and the swap icon saves it and starts a new one. The one in use shows filled. */
+.presets { display:flex; flex-wrap:wrap; gap:6px; }
 .chip { font:inherit; font-size:13px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:4px 11px;
         background:var(--bg); color:var(--fg); cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.chip:hover { border-color:var(--accent); }
-.chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent); cursor:default; }
-.chip:disabled { opacity:.6; cursor:progress; }
+button.chip:hover { border-color:var(--accent); }
+.chip:disabled, .chip button:disabled { opacity:.6; cursor:progress; }
+.chip.split { display:inline-flex; padding:0; cursor:default; }
+.chip.split button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; padding:4px 9px 4px 11px; min-width:0;
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip.split .switch { flex:none; padding:4px 9px 4px 7px; border-left:1px solid var(--line); display:grid; place-items:center; }
+.chip.split .switch svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.chip.split button:hover { background:var(--soft); }
+.chip.split:has([aria-pressed="true"]) { border-color:var(--accent); }
+.chip.split .apply[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); cursor:default; }
+.chip.split .switch:focus-visible, .chip.split .apply:focus-visible { outline-offset:-3px; }
+.presets-hint { margin:4px 0 0; font-size:12px; }
+.presets-hint svg { width:13px; height:13px; vertical-align:-2px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }

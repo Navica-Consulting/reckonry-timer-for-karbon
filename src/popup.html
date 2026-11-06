@@ -46,10 +46,11 @@
       </div>
     </div>
 
-    <!-- Shortcut buttons: fill in an empty role and task type, or save this entry and start the next on the same work. -->
-    <div id="curShortcutsBox" hidden>
-      <p class="field"><span id="curShortcutsLabel">Shortcuts</span> <button type="button" class="linklike req editShortcuts">Edit</button></p>
-      <div id="curShortcuts" class="shortcuts" role="group" aria-labelledby="curShortcutsLabel"></div>
+    <!-- Presets: the name changes this timer's role and task type; the swap icon saves it and starts a new one. -->
+    <div id="curPresetsBox" hidden>
+      <p class="field"><span id="curPresetsLabel">Presets</span> <button type="button" class="linklike req editPresets">Edit</button></p>
+      <div id="curPresets" class="presets" role="group" aria-labelledby="curPresetsLabel" aria-describedby="curPresetsHint"></div>
+      <p id="curPresetsHint" class="muted presets-hint">The name changes this timer. <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3L4 7l4 4M4 7h16M16 13l4 4-4 4M20 17H4"/></svg><span class="sr">The swap icon</span> saves it and starts a new one.</p>
     </div>
 
     <label for="curNotes" class="field">Notes</label>
@@ -77,10 +78,10 @@
     <p id="qHint" class="muted" style="margin:4px 0 0">Leave blank to choose it when you stop.</p>
     <ul class="items" id="quickList"></ul>
 
-    <!-- Shortcut buttons: start a timer with this role and task type. -->
-    <div id="startShortcutsBox" hidden>
-      <p class="field"><span id="startShortcutsLabel">Shortcuts</span> <button type="button" class="linklike req editShortcuts">Edit</button></p>
-      <div id="startShortcuts" class="shortcuts" role="group" aria-labelledby="startShortcutsLabel"></div>
+    <!-- Presets: start a timer with this role and task type. -->
+    <div id="startPresetsBox" hidden>
+      <p class="field"><span id="startPresetsLabel">Presets</span> <button type="button" class="linklike req editPresets">Edit</button></p>
+      <div id="startPresets" class="presets" role="group" aria-labelledby="startPresetsLabel"></div>
     </div>
 
     <label for="role" class="field">Role</label>
@@ -183,7 +184,7 @@
     </form>
 
     <div class="prefs-foot">
-      <p>Shortcut buttons, pausing, alerts, notes, the toolbar icon, and keyboard shortcuts are on the settings page, with help for every setting.</p>
+      <p>Presets, pausing, alerts, notes, the toolbar icon, and keyboard shortcuts are on the settings page, with help for every setting.</p>
       <div class="links">
         <button id="guide" type="button" class="linklike">All settings and help</button>
         <button id="feedback" type="button" class="linklike">Send feedback</button>
@@ -198,7 +199,7 @@
 <script src="prefs.js"></script>
 <script src="notes.js"></script>
 <script src="ui.js"></script>
-<script src="shortcuts.js"></script>
+<script src="presets.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>

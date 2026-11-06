@@ -185,7 +185,7 @@ bindPrefs($('prefs'), onPrefs).then(renderMeta);
 bindPrefs($('setupPrefs'), onPrefs);
 bindPrefs($('supportPrefs'), onPrefs);
 
-// ---- Shortcut buttons ----
+// ---- Presets ----
 // Each row saves as you go. Names save a moment after you stop typing.
 let scList = [];
 let scLists = null;
@@ -204,23 +204,23 @@ async function scLoadLists() {
 function scSave(text = 'Saved.') {
   clearTimeout(scTyping);
   scTyping = null;
-  return KTShortcuts.save(scList).then(() => saved(text));
+  return KTPresets.save(scList).then(() => saved(text));
 }
 
 function scRow(sc, i) {
   const n = i + 1;
-  const name = el('input', { type: 'text', maxlength: String(SHORTCUT_NAME_MAX), 'aria-label': `Name of shortcut ${n}`, placeholder: 'Such as Pre-session' });
+  const name = el('input', { type: 'text', maxlength: String(PRESET_NAME_MAX), 'aria-label': `Name of preset ${n}`, placeholder: 'Such as Pre-session' });
   name.value = sc.name || '';
   name.addEventListener('input', () => { sc.name = name.value; clearTimeout(scTyping); scTyping = setTimeout(scSave, 600); });
   name.addEventListener('change', () => scSave());
   const pick = (key, list, noun) => {
-    const sel = el('select', { 'aria-label': `${noun[0].toUpperCase()}${noun.slice(1)} for shortcut ${n}` });
+    const sel = el('select', { 'aria-label': `${noun[0].toUpperCase()}${noun.slice(1)} for preset ${n}` });
     fillCurrent(sel, list || [], sc[key], noun);
     sel.addEventListener('change', () => { sc[key] = sel.value && sel.value !== 'NONE' ? sel.value : null; scSave(); });
     return sel;
   };
   const lk = scLists || {};
-  const remove = el('button', { type: 'button', class: 'icon small danger', 'aria-label': `Remove shortcut ${n}`, title: 'Remove shortcut',
+  const remove = el('button', { type: 'button', class: 'icon small danger', 'aria-label': `Remove preset ${n}`, title: 'Remove preset',
     onclick: () => { scList.splice(i, 1); scRender(); scSave('Removed.'); $('scAdd').focus(); } });
   remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg>';
   return el('div', { class: 'sc-row' }, name, pick('roleKey', lk.roles, 'role'), pick('taskTypeKey', lk.taskTypes, 'task type'), remove);
@@ -230,14 +230,14 @@ function scRender() {
   $('scList').replaceChildren(...scList.map(scRow));
   $('scHead').hidden = !scList.length;
   $('scNoLists').hidden = !!(scLists && scLists.roles && scLists.roles.length);
-  $('scAdd').disabled = scList.length >= SHORTCUT_MAX;
-  $('scAdd').textContent = scList.length >= SHORTCUT_MAX ? `Up to ${SHORTCUT_MAX} shortcuts` : 'Add a shortcut';
+  $('scAdd').disabled = scList.length >= PRESET_MAX;
+  $('scAdd').textContent = scList.length >= PRESET_MAX ? `Up to ${PRESET_MAX} presets` : 'Add a preset';
 }
 
-// A new shortcut starts from your last role and task type.
+// A new preset starts from your last role and task type.
 $('scAdd').addEventListener('click', async () => {
   const last = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
-  scList.push({ id: KTShortcuts.newId(), name: '', roleKey: last.roleKey || null, taskTypeKey: last.taskTypeKey || null });
+  scList.push({ id: KTPresets.newId(), name: '', roleKey: last.roleKey || null, taskTypeKey: last.taskTypeKey || null });
   scRender();
   await scSave('Added.');
   const names = $('scList').querySelectorAll('input[type=text]');
@@ -246,13 +246,13 @@ $('scAdd').addEventListener('click', async () => {
 
 // Changes from another window show here, unless you're editing a row.
 chrome.storage.onChanged.addListener(async (c, area) => {
-  if (area !== 'sync' || !c.shortcuts || $('scList').contains(document.activeElement)) return;
-  scList = await KTShortcuts.load();
+  if (area !== 'sync' || !c.presets || $('scList').contains(document.activeElement)) return;
+  scList = await KTPresets.load();
   scRender();
 });
 
 (async () => {
-  scList = await KTShortcuts.load();
+  scList = await KTPresets.load();
   scRender();
   await scLoadLists();
   scRender();

@@ -14,7 +14,7 @@ let tick = null;
 let lists = null;        // role and task type lists: { roles, taskTypes }
 let picks = null;        // the start form's role and task type, once prefilled or chosen: { roleKey, taskTypeKey }
 let signedOut = false;   // Karbon says this browser is signed out
-let shortcuts = [];      // shortcut buttons: { id, name, roleKey, taskTypeKey }
+let presets = [];        // presets: { id, name, roleKey, taskTypeKey }
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 const level = async () => (await chrome.storage.sync.get({ noteLevel: 'auto' })).noteLevel;
@@ -63,7 +63,7 @@ function render(s) {
   draw();
   if (st === 'Started') tick = setInterval(draw, 1000);
   renderQuick();
-  renderShortcuts();
+  renderPresets();
 }
 
 // Signed out: hide the timer and the start form, and offer only the way back in.
@@ -73,7 +73,7 @@ function renderSignedOut() {
   $('pill').className = 'pill';
   $('timer').hidden = true;
   $('startBox').hidden = true;
-  renderShortcuts();
+  renderPresets();
   say('');
 }
 
@@ -281,76 +281,94 @@ $('curNotes').addEventListener('input', () => {
 });
 $('curNotes').addEventListener('change', () => saveNotes());
 
-// ---- Shortcut buttons ----
-// Each sets a role and task type. With no timer, it starts one with them. On a running timer it fills them in
-// when both are empty, or when the timer is under a minute old, so an auto-start's prefill isn't saved as its
-// own entry. Otherwise it saves this entry and starts the next one on the same work item.
-const FRESH_SECS = 60;
+// ---- Presets ----
+// Each sets a role and task type. With no timer, one button starts a timer with them. On a running timer
+// each preset has two halves: the name changes this timer, and the swap icon saves it and starts a new
+// timer on the same work item, like the card's Swap button.
 const realKey = (k) => (k && k !== 'NONE' ? k : null);
-const inUse = (sc) => isActive(current) && realKey(current.roleKey) === realKey(sc.roleKey)
-  && realKey(current.taskTypeKey) === realKey(sc.taskTypeKey);
-let usingShortcut = false;
+const inUse = (p) => isActive(current) && realKey(current.roleKey) === realKey(p.roleKey)
+  && realKey(current.taskTypeKey) === realKey(p.taskTypeKey);
+const pairOf = (p) => ({ roleKey: p.roleKey || null, taskTypeKey: p.taskTypeKey || null });
+const SWAP_PATH = 'M8 3L4 7l4 4M4 7h16M16 13l4 4-4 4M20 17H4';
+let usingPreset = false;
 
-function renderShortcuts() {
+function renderPresets() {
   const act = isActive(current);
-  paintShortcuts('cur', !signedOut && act);
-  paintShortcuts('start', !signedOut && !act);
+  paintPresets('cur', !signedOut && act);
+  paintPresets('start', !signedOut && !act);
+}
+
+function swapIcon() {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', SWAP_PATH);
+  svg.append(path);
+  return svg;
+}
+
+function presetButtons(p, running) {
+  const label = KTPresets.label(p, lists);
+  const detail = KTPresets.detail(p, lists);
+  if (!running) {
+    return el('button', { type: 'button', class: 'chip', 'data-id': `${p.id}:go`, 'aria-label': `Start a timer with ${label}: ${detail}`,
+      title: `Start a timer with ${detail}`, onclick: () => usePreset(p, 'start') }, label);
+  }
+  const used = inUse(p);
+  return el('span', { class: 'chip split', role: 'group', 'aria-label': label },
+    el('button', { type: 'button', class: 'apply', 'data-id': `${p.id}:apply`, 'aria-pressed': String(used),
+      'aria-label': used ? `${label} is on this timer: ${detail}` : `Use ${label} on this timer: ${detail}`,
+      title: used ? `On this timer: ${detail}` : `Change this timer to ${detail}`, onclick: () => usePreset(p, 'apply') }, label),
+    el('button', { type: 'button', class: 'switch', 'data-id': `${p.id}:switch`,
+      'aria-label': `Save this timer and start a new one with ${label}`,
+      title: `Save this timer and start a new one with ${detail}`, onclick: () => usePreset(p, 'switch') }, swapIcon()));
 }
 
 // Rebuilt on every refresh, so focus goes back to the same button.
-function paintShortcuts(where, on) {
-  const box = $(`${where}ShortcutsBox`);
-  const host = $(`${where}Shortcuts`);
+function paintPresets(where, on) {
+  const box = $(`${where}PresetsBox`);
+  const host = $(`${where}Presets`);
   const focused = host.contains(document.activeElement) ? document.activeElement.dataset.id : null;
-  box.hidden = !on || !shortcuts.length;
-  host.replaceChildren(...(box.hidden ? [] : shortcuts.map((sc) => {
-    const used = inUse(sc);
-    const label = KTShortcuts.label(sc, lists);
-    const detail = KTShortcuts.detail(sc, lists);
-    return el('button', {
-      type: 'button', class: 'chip', 'data-id': sc.id, 'aria-pressed': String(used),
-      'aria-label': `${label}: ${detail}${used ? ', in use' : ''}`, title: used ? `In use: ${detail}` : detail,
-      onclick: () => useShortcut(sc),
-    }, label);
-  })));
+  box.hidden = !on || !presets.length;
+  host.replaceChildren(...(box.hidden ? [] : presets.map((p) => presetButtons(p, where === 'cur'))));
   if (focused) { const b = host.querySelector(`[data-id="${focused}"]`); if (b) b.focus(); }
 }
 
-async function useShortcut(sc) {
-  if (usingShortcut || inUse(sc)) return;
-  usingShortcut = true;
-  for (const b of document.querySelectorAll('.chip')) b.disabled = true;
+async function usePreset(p, how) {
+  if (usingPreset || (how === 'apply' && inUse(p))) return;
+  usingPreset = true;
+  const buttons = () => document.querySelectorAll('#curPresets button, #startPresets button');
+  for (const b of buttons()) b.disabled = true;
   try {
-    if (!isActive(current)) return await startWithShortcut(sc);
-    const s = current;
-    const blank = !realKey(s.roleKey) && !realKey(s.taskTypeKey);
-    const pair = { roleKey: sc.roleKey || null, taskTypeKey: sc.taskTypeKey || null };
-    if (blank || elapsedSeconds(s) < FRESH_SECS) return await editCurrent(pair);
+    if (how === 'start' || !isActive(current)) return await startWithPreset(p);
+    if (how === 'apply') return await editCurrent(pairOf(p));
     // Save this entry, then the next one on the same work item. Required fields still empty bounce.
-    const work = { workKey: s.work, linkType: s.linkType || 'WorkItem' };
+    const work = { workKey: current.work, linkType: current.linkType || 'WorkItem' };
     if (!(await saveCurrent())) return;
-    const r = await send('start', { ...work, ...pair, prefill: false, note: await noteFor('manualStart'), interactive: true });
+    const r = await send('start', { ...work, ...pairOf(p), prefill: false, note: await noteFor('manualStart'), interactive: true });
     if (!r || !r.ok) sayError(r);
     await refresh();
   } finally {
-    usingShortcut = false;
-    for (const b of document.querySelectorAll('.chip')) b.disabled = false;
+    usingPreset = false;
+    for (const b of buttons()) b.disabled = false;
   }
 }
 
 // With no timer: the work chosen in the start form, or else the work item open in this tab.
-async function startWithShortcut(sc) {
+async function startWithPreset(p) {
   const c = start.client.item;
   let item = start.work.item || (workOnly() ? null : await keyedClient(c));
   if (!item && c && !workOnly()) return say(`Couldn't find ${c.title} in Karbon. Search for the client instead.`);
   if (!item && !c && here) item = { key: here.key, linkType: 'WorkItem', title: here.title };
-  setPicks(sc);
-  return startNew(item, { roleKey: sc.roleKey || null, taskTypeKey: sc.taskTypeKey || null, prefill: false });
+  setPicks(p);
+  return startNew(item, { ...pairOf(p), prefill: false });
 }
 
-async function loadShortcuts() {
-  shortcuts = await KTShortcuts.load();
-  renderShortcuts();
+async function loadPresets() {
+  presets = await KTPresets.load();
+  renderPresets();
 }
 
 // ---- Client and Work fields ----
@@ -410,7 +428,7 @@ async function startArgs(item) {
   };
 }
 
-// over: start arguments that win over the form's, such as a shortcut's role and task type.
+// over: start arguments that win over the form's, such as a preset's role and task type.
 async function startNew(item, over = {}) {
   const args = { ...(await startArgs(item)), ...over };
   say('');
@@ -464,7 +482,7 @@ async function loadLookups() {
   const paint = (lk) => {
     lists = lk || null;
     if (isActive(current)) renderDetails(current);
-    renderShortcuts();
+    renderPresets();
     fillSelect($('role'), (lk && lk.roles) || [], picks ? picks.roleKey : $('role').value || d.roleKey, 'role');
     fillSelect($('taskType'), (lk && lk.taskTypes) || [], picks ? picks.taskTypeKey : $('taskType').value || d.taskTypeKey, 'task type');
   };
@@ -500,12 +518,12 @@ $('signIn').addEventListener('click', async () => {
 // Signing in or out anywhere updates the open panel.
 chrome.storage.onChanged.addListener((c, area) => {
   if (area === 'local' && c.signedIn) setSignedOut(c.signedIn.newValue === false);
-  if (area === 'sync' && c.shortcuts) loadShortcuts();
+  if (area === 'sync' && c.presets) loadPresets();
 });
 
-for (const b of document.querySelectorAll('.editShortcuts')) {
-  b.setAttribute('aria-label', 'Edit shortcut buttons');
-  b.addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#g-shortcuts' }); window.close(); });
+for (const b of document.querySelectorAll('.editPresets')) {
+  b.setAttribute('aria-label', 'Edit presets');
+  b.addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#g-presets' }); window.close(); });
 }
 $('guide').addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#settings' }); window.close(); });
 $('feedback').addEventListener('click', async () => { await openFeedback(); window.close(); });
@@ -524,7 +542,7 @@ $('feedback').addEventListener('click', async () => { await openFeedback(); wind
   ({ timeCfg = null } = await chrome.storage.local.get('timeCfg'));
   buildFields();
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
-  shortcuts = await KTShortcuts.load();
+  presets = await KTPresets.load();
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
   if (signedOut) return;
