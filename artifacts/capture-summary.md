@@ -102,3 +102,14 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
   - `GET /time/api/{tenant}/stopwatches/{user}` (state "Stopped").
   - `GET /time/api/{tenant}/timeTenantSettings/{tenant}`.
 - Verified 2026-10-24 (0.7.18): the extension's background worker can read and write the stopwatch on `us3.karbonhq.com` with no Karbon tab open. Karbon accepts the extension's origin and needs no CSRF token or connection ID.
+
+## A client's Work tab (captured 2026-11-06, Max's tenant, read-only)
+- Opening a client's Work tab sends `POST /todo/api/{tenant}/workViewListItems` to the regional API host. Seen on an organization and on a client group.
+- Body: `{ take: 40, skip: 0, <client filter>, listSortBy: "status", sortDescending: false, status: [...], impliedStatus: [...] }`.
+  - The client filter is keyed by kind: `client: [orgKey]` on an organization page, `clientgroup: [groupKey]` on a client group page. A person's page wasn't captured; it most likely uses `client` too.
+  - Default view (active work): `status: ["Planned"]`, `impliedStatus: ["ReadyToStart", "InProgress", "Waiting"]`. With completed work included, both are empty arrays, which means every status.
+  - Paging: `take` 40, `skip` grows as the list scrolls.
+- Response: `{ workViewListItems: [...] }`, each with `workItemPermaKey`, `workItemTitle`, `workItemStatus`, `clientPermaKey`, `clientLinkType`, `clientDisplayName`, `clientGroupPermaKey`, `clientGroupName`, `workTemplateTitle`, `startDate`, `dueDate`, `completedDate`, and checklist counts. No search term: the list is filtered by client only.
+- A client group's list includes work for its member clients, each with its own `clientPermaKey`.
+- The tab also sends `POST /todo/api/{tenant}/viewFilterResultSummaries` with the same client filter and a `status` list of built-in names plus the firm's custom status keys, for the filter counts. `GET /tenant/api/{tenant}/statusLookups` and `workTypeLookups` load the filter menus.
+- Use in the extension: with a client chosen, fetch that client's active work with this call (by its key and kind) and filter titles locally, instead of matching client names in global search. This fixes the 25-result limit and client groups.
