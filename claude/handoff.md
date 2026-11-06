@@ -6,6 +6,8 @@ Build stage. 0.7.35 is on `origin/main` (commit `e28f2e0`) and is the release ca
 ## Next step
 Max tests 0.7.34 (the setup probe waits for the bootstrap cookie) and 0.7.35 (toast dismiss X and Escape) in Chrome. Then check whether 0.6.1 cleared review. If it has, tag `v0.7.35`, upload `dist/reckonry-timer-for-karbon-0.7.35.zip` by hand, and paste `docs/store-privacy-tab.md` into the store's Privacy practices tab. Then use the store build on a live tenant, starting with the threads below that wait on a live test.
 
+Also: 0.7.36 adds shortcut buttons (built, tested with stubbed Chrome APIs only, not committed). See the session log.
+
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
 - `build.sh` rebuilds `unpacked/production` (app2.karbonhq.com, the production candidate) and `unpacked/stage` (webapp-stage.karbonhq.com, never published) in place, so Chrome only needs Reload. It also writes versioned zips to `dist/`. Git ignores both.
@@ -17,6 +19,7 @@ Max tests 0.7.34 (the setup probe waits for the bootstrap cookie) and 0.7.35 (to
 - Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review. It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
 
 ## Open threads
+- Time entry rules (internal vs. client roles and task types, and a confirm step for time logged straight to a contact): planned on 2026-11-05 in `artifacts/time-entry-rules-plan.md`, then parked by Max as high effort for moderate gain. Most entry points (manual Add time, timesheet grid, edits) and the contact custom field calls are still not captured (waiting on: Max, if it comes back).
 - Signed out of Karbon: 0.7.19 hides the timer when Karbon is signed out and offers a Sign in button that opens Karbon's sign-in page. 0.7.21 removed the page warning and the automatic opens (Max). It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured. Tested only with stubbed Chrome APIs (waiting on: a live sign-out test).
 - First store submission: Max uploaded 0.6.1 by hand, and it is in review. A new version can't be submitted until it clears. On 2026-10-24 Max chose to upload the next version by hand too, and the scheduled task `reckonry-send-074-after-approval` was disabled (not deleted). Draft justifications for `cookies`, `*.karbonhq.com`, and the other permissions are in `docs/store-privacy-tab.md` (waiting on: Google, then Max).
 - Privacy policy: hosted on GitHub Pages at https://timer.reckonry.ai/privacy since 0.7.29, published from `docs/privacy-policy.md` on every version tag. The store listing points there. Effective 2026-10-24, with the feedback form and error log. It still doesn't cover the 0.7.2 `cookies` permission, the `*.karbonhq.com` host access, the stored firm name, or Chrome Sync of settings. Proposed edits are in `docs/PRIVACY.md` (waiting on: Max).
@@ -51,6 +54,13 @@ Max tests 0.7.34 (the setup probe waits for the bootstrap cookie) and 0.7.35 (to
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-11-05, shortcut buttons (Claude Code)
+- Max asked for one-click buttons that carry a role and task type, to move one work item's time between stages like pre-session, session, and post-session.
+- New `src/shortcuts.js` (storage and labels). The panel shows a Shortcuts row in the timer card and the start form, with an Edit link. The settings page has a Shortcut buttons card under Auto-switch. The TOC's keyboard link is now "Keyboard shortcuts" to avoid a clash.
+- Behavior is recorded in `context/timer-behavior.md`. The one-minute fill-in rule is Claude's call, waiting on Max.
+- Privacy review added to `docs/PRIVACY.md`: one new `storage.sync` key, no new permissions or calls.
+- Built as 0.7.36. Checked in the browser pane with stubbed Chrome APIs: switch, fill-in on a fresh timer, fill-in on an empty one, and start with no timer. Not loaded in Chrome, not committed.
+
 ### 2026-11-05, Linux checkout and unpacked build (Claude Code)
 - Max asked to make sure the extension is tracked. It already had this repo. The Mac had 0.7.33 through 0.7.35 built but not committed; Max pushed them from the Mac as `e28f2e0`.
 - Cloned to `~/Documents/Dev Projects/reckonry-timer-for-karbon` on the Linux machine and ran `build.sh`. Chrome there is a Flatpak with access to `~/Documents`, so Load unpacked works from the project folder.

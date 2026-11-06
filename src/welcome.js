@@ -185,6 +185,79 @@ bindPrefs($('prefs'), onPrefs).then(renderMeta);
 bindPrefs($('setupPrefs'), onPrefs);
 bindPrefs($('supportPrefs'), onPrefs);
 
+// ---- Shortcut buttons ----
+// Each row saves as you go. Names save a moment after you stop typing.
+let scList = [];
+let scLists = null;
+let scTyping = null;
+
+async function scLoadLists() {
+  ({ lookups: scLists = null } = await chrome.storage.local.get('lookups'));
+  if (scLists && scLists.roles && scLists.roles.length) return;
+  const r = await chrome.runtime.sendMessage({ type: 'cmd', cmd: 'lookups' }).catch(() => null);
+  if (r && r.ok && r.result && (r.result.roles.length || r.result.taskTypes.length)) {
+    scLists = r.result;
+    await chrome.storage.local.set({ lookups: scLists });
+  }
+}
+
+function scSave(text = 'Saved.') {
+  clearTimeout(scTyping);
+  scTyping = null;
+  return KTShortcuts.save(scList).then(() => saved(text));
+}
+
+function scRow(sc, i) {
+  const n = i + 1;
+  const name = el('input', { type: 'text', maxlength: String(SHORTCUT_NAME_MAX), 'aria-label': `Name of shortcut ${n}`, placeholder: 'Such as Pre-session' });
+  name.value = sc.name || '';
+  name.addEventListener('input', () => { sc.name = name.value; clearTimeout(scTyping); scTyping = setTimeout(scSave, 600); });
+  name.addEventListener('change', () => scSave());
+  const pick = (key, list, noun) => {
+    const sel = el('select', { 'aria-label': `${noun[0].toUpperCase()}${noun.slice(1)} for shortcut ${n}` });
+    fillCurrent(sel, list || [], sc[key], noun);
+    sel.addEventListener('change', () => { sc[key] = sel.value && sel.value !== 'NONE' ? sel.value : null; scSave(); });
+    return sel;
+  };
+  const lk = scLists || {};
+  const remove = el('button', { type: 'button', class: 'icon small danger', 'aria-label': `Remove shortcut ${n}`, title: 'Remove shortcut',
+    onclick: () => { scList.splice(i, 1); scRender(); scSave('Removed.'); $('scAdd').focus(); } });
+  remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg>';
+  return el('div', { class: 'sc-row' }, name, pick('roleKey', lk.roles, 'role'), pick('taskTypeKey', lk.taskTypes, 'task type'), remove);
+}
+
+function scRender() {
+  $('scList').replaceChildren(...scList.map(scRow));
+  $('scHead').hidden = !scList.length;
+  $('scNoLists').hidden = !!(scLists && scLists.roles && scLists.roles.length);
+  $('scAdd').disabled = scList.length >= SHORTCUT_MAX;
+  $('scAdd').textContent = scList.length >= SHORTCUT_MAX ? `Up to ${SHORTCUT_MAX} shortcuts` : 'Add a shortcut';
+}
+
+// A new shortcut starts from your last role and task type.
+$('scAdd').addEventListener('click', async () => {
+  const last = await chrome.storage.local.get(['roleKey', 'taskTypeKey']);
+  scList.push({ id: KTShortcuts.newId(), name: '', roleKey: last.roleKey || null, taskTypeKey: last.taskTypeKey || null });
+  scRender();
+  await scSave('Added.');
+  const names = $('scList').querySelectorAll('input[type=text]');
+  names[names.length - 1].focus();
+});
+
+// Changes from another window show here, unless you're editing a row.
+chrome.storage.onChanged.addListener(async (c, area) => {
+  if (area !== 'sync' || !c.shortcuts || $('scList').contains(document.activeElement)) return;
+  scList = await KTShortcuts.load();
+  scRender();
+});
+
+(async () => {
+  scList = await KTShortcuts.load();
+  scRender();
+  await scLoadLists();
+  scRender();
+})();
+
 // ---- Menu: mark the part in view ----
 const navLinks = [...document.querySelectorAll('nav.toc > ul > li:not(.sub) > a')];
 const seen = new Map();

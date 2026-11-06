@@ -14,6 +14,7 @@ let tick = null;
 let lists = null;        // role and task type lists: { roles, taskTypes }
 let picks = null;        // the start form's role and task type, once prefilled or chosen: { roleKey, taskTypeKey }
 let signedOut = false;   // Karbon says this browser is signed out
+let shortcuts = [];      // shortcut buttons: { id, name, roleKey, taskTypeKey }
 
 const send = (cmd, args) => chrome.runtime.sendMessage({ type: 'cmd', cmd, args });
 const level = async () => (await chrome.storage.sync.get({ noteLevel: 'auto' })).noteLevel;
@@ -62,6 +63,7 @@ function render(s) {
   draw();
   if (st === 'Started') tick = setInterval(draw, 1000);
   renderQuick();
+  renderShortcuts();
 }
 
 // Signed out: hide the timer and the start form, and offer only the way back in.
@@ -71,6 +73,7 @@ function renderSignedOut() {
   $('pill').className = 'pill';
   $('timer').hidden = true;
   $('startBox').hidden = true;
+  renderShortcuts();
   say('');
 }
 
@@ -278,6 +281,78 @@ $('curNotes').addEventListener('input', () => {
 });
 $('curNotes').addEventListener('change', () => saveNotes());
 
+// ---- Shortcut buttons ----
+// Each sets a role and task type. With no timer, it starts one with them. On a running timer it fills them in
+// when both are empty, or when the timer is under a minute old, so an auto-start's prefill isn't saved as its
+// own entry. Otherwise it saves this entry and starts the next one on the same work item.
+const FRESH_SECS = 60;
+const realKey = (k) => (k && k !== 'NONE' ? k : null);
+const inUse = (sc) => isActive(current) && realKey(current.roleKey) === realKey(sc.roleKey)
+  && realKey(current.taskTypeKey) === realKey(sc.taskTypeKey);
+let usingShortcut = false;
+
+function renderShortcuts() {
+  const act = isActive(current);
+  paintShortcuts('cur', !signedOut && act);
+  paintShortcuts('start', !signedOut && !act);
+}
+
+// Rebuilt on every refresh, so focus goes back to the same button.
+function paintShortcuts(where, on) {
+  const box = $(`${where}ShortcutsBox`);
+  const host = $(`${where}Shortcuts`);
+  const focused = host.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+  box.hidden = !on || !shortcuts.length;
+  host.replaceChildren(...(box.hidden ? [] : shortcuts.map((sc) => {
+    const used = inUse(sc);
+    const label = KTShortcuts.label(sc, lists);
+    const detail = KTShortcuts.detail(sc, lists);
+    return el('button', {
+      type: 'button', class: 'chip', 'data-id': sc.id, 'aria-pressed': String(used),
+      'aria-label': `${label}: ${detail}${used ? ', in use' : ''}`, title: used ? `In use: ${detail}` : detail,
+      onclick: () => useShortcut(sc),
+    }, label);
+  })));
+  if (focused) { const b = host.querySelector(`[data-id="${focused}"]`); if (b) b.focus(); }
+}
+
+async function useShortcut(sc) {
+  if (usingShortcut || inUse(sc)) return;
+  usingShortcut = true;
+  for (const b of document.querySelectorAll('.chip')) b.disabled = true;
+  try {
+    if (!isActive(current)) return await startWithShortcut(sc);
+    const s = current;
+    const blank = !realKey(s.roleKey) && !realKey(s.taskTypeKey);
+    const pair = { roleKey: sc.roleKey || null, taskTypeKey: sc.taskTypeKey || null };
+    if (blank || elapsedSeconds(s) < FRESH_SECS) return await editCurrent(pair);
+    // Save this entry, then the next one on the same work item. Required fields still empty bounce.
+    const work = { workKey: s.work, linkType: s.linkType || 'WorkItem' };
+    if (!(await saveCurrent())) return;
+    const r = await send('start', { ...work, ...pair, prefill: false, note: await noteFor('manualStart'), interactive: true });
+    if (!r || !r.ok) sayError(r);
+    await refresh();
+  } finally {
+    usingShortcut = false;
+    for (const b of document.querySelectorAll('.chip')) b.disabled = false;
+  }
+}
+
+// With no timer: the work chosen in the start form, or else the work item open in this tab.
+async function startWithShortcut(sc) {
+  const c = start.client.item;
+  let item = start.work.item || (workOnly() ? null : await keyedClient(c));
+  if (!item && c && !workOnly()) return say(`Couldn't find ${c.title} in Karbon. Search for the client instead.`);
+  if (!item && !c && here) item = { key: here.key, linkType: 'WorkItem', title: here.title };
+  setPicks(sc);
+  return startNew(item, { roleKey: sc.roleKey || null, taskTypeKey: sc.taskTypeKey || null, prefill: false });
+}
+
+async function loadShortcuts() {
+  shortcuts = await KTShortcuts.load();
+  renderShortcuts();
+}
+
 // ---- Client and Work fields ----
 // The start form's and the running timer's, built once the firm's settings are known.
 const start = {};
@@ -335,8 +410,9 @@ async function startArgs(item) {
   };
 }
 
-async function startNew(item) {
-  const args = await startArgs(item);
+// over: start arguments that win over the form's, such as a shortcut's role and task type.
+async function startNew(item, over = {}) {
+  const args = { ...(await startArgs(item)), ...over };
   say('');
   const stopNote = await noteFor('manualStop');
   const r = await send('start', { ...args, stopNote, interactive: true });
@@ -388,6 +464,7 @@ async function loadLookups() {
   const paint = (lk) => {
     lists = lk || null;
     if (isActive(current)) renderDetails(current);
+    renderShortcuts();
     fillSelect($('role'), (lk && lk.roles) || [], picks ? picks.roleKey : $('role').value || d.roleKey, 'role');
     fillSelect($('taskType'), (lk && lk.taskTypes) || [], picks ? picks.taskTypeKey : $('taskType').value || d.taskTypeKey, 'task type');
   };
@@ -423,8 +500,13 @@ $('signIn').addEventListener('click', async () => {
 // Signing in or out anywhere updates the open panel.
 chrome.storage.onChanged.addListener((c, area) => {
   if (area === 'local' && c.signedIn) setSignedOut(c.signedIn.newValue === false);
+  if (area === 'sync' && c.shortcuts) loadShortcuts();
 });
 
+for (const b of document.querySelectorAll('.editShortcuts')) {
+  b.setAttribute('aria-label', 'Edit shortcut buttons');
+  b.addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#g-shortcuts' }); window.close(); });
+}
 $('guide').addEventListener('click', () => { chrome.tabs.create({ url: 'welcome.html#settings' }); window.close(); });
 $('feedback').addEventListener('click', async () => { await openFeedback(); window.close(); });
 
@@ -442,6 +524,7 @@ $('feedback').addEventListener('click', async () => { await openFeedback(); wind
   ({ timeCfg = null } = await chrome.storage.local.get('timeCfg'));
   buildFields();
   if (workOnly()) $('contactsSub').textContent = 'Your firm books time to work items only, so these timers start with no work item. You choose one when you stop.';
+  shortcuts = await KTShortcuts.load();
   render(await chrome.runtime.sendMessage({ type: 'getCached' }));
   refresh();
   if (signedOut) return;

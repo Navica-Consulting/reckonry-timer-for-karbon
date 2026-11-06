@@ -35,7 +35,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.32)
+## Data inventory (as of 0.7.36)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -48,6 +48,7 @@ or taken down:
 | Work item budget role and task type, for prefill | Karbon `estimateActualInfos` API | Not stored | No |
 | Firm time settings (work-only, notes required) | Karbon API | `storage.local` | No |
 | Settings, including the toolbar icon color (0.7.5), contact reminders (0.7.7), and contact auto-switch (0.7.11) | User | `storage.sync` | Synced by Chrome Sync if the user has it on |
+| Shortcut buttons (the user's label, plus role and task type keys; at most 8) (0.7.36) | User | `storage.sync` (`shortcuts`) | Synced by Chrome Sync if the user has it on |
 | Idle, locked, or asleep state | `idle` permission | Not stored | No |
 | Notes on time entries | Extension | Karbon time entry | Sent to Karbon only |
 | Feedback form (version, on/off settings, recent errors prefilled; optional email typed by the user) | User clicks Send feedback | Not stored by the extension; Google Forms and its Sheet | Only if the user submits it |
@@ -121,6 +122,14 @@ item's budget line assigned to you. Nothing from it is stored. The firm's `timeE
 read from the time settings call the extension already makes. No new permissions or host access.
 The policy's list of what the extension handles now names the per-work-item memory.
 
+Shortcut buttons review (2026-11-05, 0.7.36): one new `storage.sync` key, `shortcuts`, holds up
+to 8 buttons, each a label the user types (at most 30 characters) and Karbon role and task type
+keys, never their names. Chrome Sync carries it to the user's other computers when it's on, like
+the other settings. It is not in the feedback form, the email draft, or Copy details. The buttons
+use calls the extension already makes (start, stop and save, and the stopwatch update). No new
+permissions, host access, or network calls. The policy's open item on Chrome Sync now covers this
+key too, so the policy needs no separate change.
+
 ## Hosting setup (done 2026-10-24)
 
 GitHub Pages is on for this repository, public, built by Actions, with the custom domain
@@ -139,8 +148,8 @@ Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover y
 - 0.7.2 widened host access to `https://*.karbonhq.com/*` and calls Karbon's API from the
   background worker. Worth naming Karbon's regional API hosts.
 - 0.7.2 stores the firm name for display.
-- Settings use `chrome.storage.sync`, which Chrome syncs to the user's Google account when
-  Chrome Sync is on. The policy says data stays in the browser's extension storage.
+- Settings and shortcut buttons (0.7.36) use `chrome.storage.sync`, which Chrome syncs to the
+  user's Google account when Chrome Sync is on. The policy says data stays in the browser's extension storage.
 - In the store dashboard, add a justification for the new `cookies` permission and the wider
   host permission before submitting 0.7.2 or later.
 

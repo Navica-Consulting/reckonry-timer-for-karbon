@@ -55,7 +55,7 @@ details { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
 /* Start panel, laid out like Karbon's Start Timer */
 .start { margin-top:12px; }
 .panel-title { font-size:15px; margin:0; color:var(--fg); text-transform:none; letter-spacing:0; }
-label.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+label.field, p.field { display:block; margin:10px 0 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
 /* Work search: recents and results float under the field while it has focus. */
 .combo { position:relative; }
 .drop { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:10; background:var(--bg); border:1px solid var(--line);
@@ -149,3 +149,10 @@ input[type=radio] { flex:none; width:18px; height:18px; margin:0; accent-color:v
 /* Armed: the first press fills the button red; a second press confirms. */
 .icon.danger.armed, .icon.danger.armed:hover { background:#b42318; color:#fff; }
 @media (prefers-color-scheme: dark) { .icon.danger.armed, .icon.danger.armed:hover { background:#ff8a80; color:#1b1f24; } }
+/* Shortcut buttons: one click sets a role and task type. The one in use shows filled. */
+.shortcuts { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { font:inherit; font-size:13px; font-weight:600; border:1px solid var(--line); border-radius:999px; padding:4px 11px;
+        background:var(--bg); color:var(--fg); cursor:pointer; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip:hover { border-color:var(--accent); }
+.chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent); cursor:default; }
+.chip:disabled { opacity:.6; cursor:progress; }

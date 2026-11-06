@@ -108,6 +108,10 @@
     .page .actions { margin-top:12px; }
     #saved { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--fg); color:var(--page); padding:8px 14px; border-radius:8px; font-size:14px; opacity:0; pointer-events:none; transition:opacity .2s; }
     #saved.show { opacity:1; }
+    .sc-row { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 28px; gap:8px; align-items:center; padding:4px 0; }
+    .sc-head { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:8px 0 0; }
+    #scAdd { margin-top:10px; }
+    @media (max-width: 640px) { .sc-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 28px; } .sc-row > :first-child { grid-column:1 / -1; } .sc-head { display:none; } }
 
     @media (max-width: 820px) {
       .wrap { display:block; padding:0 16px 64px; }
@@ -142,12 +146,13 @@
       <li class="sub"><a href="#g-work">Work</a></li>
       <li class="sub"><a href="#g-clients">Clients</a></li>
       <li class="sub"><a href="#g-switch">Auto-switch</a></li>
+      <li class="sub"><a href="#g-shortcuts">Shortcut buttons</a></li>
       <li class="sub"><a href="#g-away">Away from the computer</a></li>
       <li class="sub"><a href="#g-alerts">Alerts and badge</a></li>
       <li class="sub"><a href="#g-entries">Time entries</a></li>
       <li class="sub"><a href="#g-icon">Toolbar icon</a></li>
       <li><a href="#how">How it works</a></li>
-      <li><a href="#keys">Shortcuts</a></li>
+      <li><a href="#keys">Keyboard shortcuts</a></li>
       <li><a href="#faq">Questions</a></li>
       <li><a href="#support">Support</a></li>
     </ul>
@@ -341,6 +346,21 @@
             </div>
           </div>
           <p class="intro" style="margin-top:6px">A timer with no work item never switches on its own. A pop-up asks you to finish it first.</p>
+        </section>
+
+        <!-- Shortcut buttons are a list, not one setting, so they save on their own and Restore all defaults keeps them. -->
+        <section class="card" id="g-shortcuts" aria-labelledby="h-shortcuts">
+          <h3 id="h-shortcuts">Shortcut buttons</h3>
+          <p class="intro">Buttons in the toolbar panel that set a role and task type in one click. Use them for the stages of one job, such as before, during, and after a client session.</p>
+          <div class="help">
+            <p>With no timer running, a shortcut starts one on the work you chose, or on the work item you have open.</p>
+            <p>On a timer that has no role or task type yet, or that started less than a minute ago, it fills them in.</p>
+            <p>Otherwise it saves the current entry and starts a new one on the same work item.</p>
+          </div>
+          <div id="scHead" class="sc-row sc-head" aria-hidden="true" hidden><span>Button name</span><span>Role</span><span>Task type</span><span></span></div>
+          <div id="scList"></div>
+          <p id="scNoLists" class="help" hidden>Open the toolbar panel once while signed in to Karbon to load your roles and task types.</p>
+          <button type="button" class="btn" id="scAdd">Add a shortcut</button>
         </section>
 
         <section class="card" id="g-away" aria-labelledby="h-away">
@@ -619,6 +639,7 @@
 <script src="defaults.js"></script>
 <script src="prefs.js"></script>
 <script src="ui.js"></script>
+<script src="shortcuts.js"></script>
 <script src="welcome.js"></script>
 </body>
 </html>

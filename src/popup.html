@@ -46,6 +46,12 @@
       </div>
     </div>
 
+    <!-- Shortcut buttons: fill in an empty role and task type, or save this entry and start the next on the same work. -->
+    <div id="curShortcutsBox" hidden>
+      <p class="field"><span id="curShortcutsLabel">Shortcuts</span> <button type="button" class="linklike req editShortcuts">Edit</button></p>
+      <div id="curShortcuts" class="shortcuts" role="group" aria-labelledby="curShortcutsLabel"></div>
+    </div>
+
     <label for="curNotes" class="field">Notes</label>
     <textarea id="curNotes" rows="2" placeholder="Add a note to this timer"></textarea>
   </section>
@@ -70,6 +76,12 @@
     <div id="workField"></div>
     <p id="qHint" class="muted" style="margin:4px 0 0">Leave blank to choose it when you stop.</p>
     <ul class="items" id="quickList"></ul>
+
+    <!-- Shortcut buttons: start a timer with this role and task type. -->
+    <div id="startShortcutsBox" hidden>
+      <p class="field"><span id="startShortcutsLabel">Shortcuts</span> <button type="button" class="linklike req editShortcuts">Edit</button></p>
+      <div id="startShortcuts" class="shortcuts" role="group" aria-labelledby="startShortcutsLabel"></div>
+    </div>
 
     <label for="role" class="field">Role</label>
     <select id="role"></select>
@@ -171,7 +183,7 @@
     </form>
 
     <div class="prefs-foot">
-      <p>Pausing, alerts, notes, the toolbar icon, and shortcuts are on the settings page, with help for every setting.</p>
+      <p>Shortcut buttons, pausing, alerts, notes, the toolbar icon, and keyboard shortcuts are on the settings page, with help for every setting.</p>
       <div class="links">
         <button id="guide" type="button" class="linklike">All settings and help</button>
         <button id="feedback" type="button" class="linklike">Send feedback</button>
@@ -186,6 +198,7 @@
 <script src="prefs.js"></script>
 <script src="notes.js"></script>
 <script src="ui.js"></script>
+<script src="shortcuts.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>
