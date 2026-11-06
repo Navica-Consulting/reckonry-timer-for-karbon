@@ -4,7 +4,7 @@
 
 # Privacy Policy for Reckonry Timer for Karbon
 
-Effective date: October 24, 2026
+Effective date: November 5, 2026
 
 Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This policy explains what the extension handles and what it does not.
 
@@ -12,7 +12,7 @@ Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This pol
 
 To start, pause, and switch your Karbon timer, the extension reads and stores a small amount of information in your browser:
 
-- Your Karbon user and firm identifiers, learned from the Karbon web app.
+- Your Karbon user and firm identifiers, learned from the Karbon web app or read from a Karbon sign-in cookie. That cookie holds no password or session token. The extension uses no other cookie, and it stores no cookies.
 - The work item or contact you have open in Karbon, including its address, title, and client name.
 - Your current timer state, default role, task type, and recent work items.
 - The role and task type you last saved on each work item, kept for 100 days, so the timer can fill them in the way Karbon does. Only Karbon's record keys are kept, not names.

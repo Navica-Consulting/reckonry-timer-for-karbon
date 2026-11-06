@@ -140,12 +140,8 @@ from `main` and from `v*` tags. The store listing's privacy policy URL points to
 
 ## Open items
 
-Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover yet:
+Changes since 0.7.1 that the policy (effective November 5, 2026) may not cover yet:
 
-- 0.7.2 added the `cookies` permission and reads Karbon's `bootstrap-cookie-*` to learn the
-  account without a Karbon tab. The policy says identifiers are "learned from the Karbon web app";
-  say they are also read from a Karbon sign-in cookie, and that the cookie holds no password or
-  session token.
 - 0.7.2 widened host access to `https://*.karbonhq.com/*` and calls Karbon's API from the
   background worker. Worth naming Karbon's regional API hosts.
 - 0.7.2 stores the firm name for display.
@@ -161,3 +157,4 @@ Changes since 0.7.1 that the policy (effective October 24, 2026) may not cover y
 | 2026-10-23 | 0.7.1 | First published policy. |
 | 2026-10-24 | 0.7.30 | Feedback opens a Google Form with recent errors. Moved to timer.reckonry.ai/privacy. |
 | 2026-10-24 | 0.7.32 | Names the per-work-item role and task type memory used for prefill. |
+| 2026-11-05 | 0.7.37 | Says identifiers are also read from a Karbon sign-in cookie, which holds no password or session token. |

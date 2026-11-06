@@ -63,6 +63,14 @@ No. All code ships in the package.
 
 The extension sends nothing to the developer. It sends timer and work item data only to Karbon,
 the service the user signed in to, to do the timer actions they ask for. Feedback goes through a
-Google Form the user opens and submits themselves, which the privacy policy covers. Check whether
-the dashboard counts the Karbon calls as "website content" or "user activity" before leaving every
-data type unchecked. Tick all three certifications.
+Google Form the user opens and submits themselves, which the privacy policy covers.
+
+Data types, chosen 2026-11-05 (Max), each matched to the policy:
+- Personally identifiable information: checked. Karbon user and firm IDs, and the optional email on the feedback form.
+- Web history: checked. The address and title of the open Karbon page.
+- User activity: checked. Idle, locked, or asleep, for auto-pause.
+- Website content: checked. Work item and client names and timer notes, read from and sent to Karbon.
+- Authentication information: unchecked. The bootstrap cookie holds no password or session token.
+- Health, financial, personal communications, and location: unchecked.
+
+Tick all three certifications.
