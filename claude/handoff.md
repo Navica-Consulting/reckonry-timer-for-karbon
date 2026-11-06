@@ -49,6 +49,12 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
 
 ## Session log
+### 2026-11-06, landing page (Claude Code)
+- Max asked for a landing page at timer.reckonry.ai with screenshots, copy, use cases, and links to the privacy policy and the store.
+- New `site/index.html` (no outside scripts or fonts) and `site/img/`, cropped from the store screenshots. The use-case stories are labeled as typical scenarios, not quotes. Max reviewed the draft.
+- `scripts/privacy-page.sh` now copies `site/` into the Pages build in place of the redirect, and the privacy page links back home. It deploys on the next `v*` tag or a manual run of the Privacy page workflow.
+- Open: the page says "free" though monetization isn't decided, and the store link needs the listing public (waiting on: Max).
+
 ### 2026-11-06, store release, open items, and install connection (Claude Code)
 - Max reported 0.7.37 live and unlisted in the store, tested on the live tenant, and closed most open threads (see Closed on 2026-11-06).
 - Privacy policy: it already named the cookie. Added the stored firm name, Chrome Sync of settings and presets, and Karbon's servers as the destination. Effective 2026-11-06. Committed the store listing text and icon in `store/`. Tagged `v0.7.37`; the Release and Privacy page workflows ran (no store upload, since `CWS_AUTO_PUBLISH` is unset).

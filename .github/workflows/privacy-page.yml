@@ -1,6 +1,7 @@
-# On a version tag (v0.7.5 and so on): publish docs/privacy-policy.md to GitHub Pages at
-# https://timer.reckonry.ai/privacy, so the hosted policy always matches the release.
-# Run it by hand (Actions, Privacy page, Run workflow) to publish a policy fix between releases.
+# On a version tag (v0.7.5 and so on): publish the landing page in site/ to https://timer.reckonry.ai
+# and docs/privacy-policy.md to https://timer.reckonry.ai/privacy, so the hosted policy always
+# matches the release. Run it by hand (Actions, Privacy page, Run workflow) to publish a policy fix
+# or a landing page change between releases.
 # Setup steps are in docs/PRIVACY.md.
 name: Privacy page
 

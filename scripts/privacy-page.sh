@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Renders docs/privacy-policy.md into a static site for GitHub Pages (timer.reckonry.ai).
+# Builds the static site for GitHub Pages (timer.reckonry.ai): the landing page from site/,
+# plus docs/privacy-policy.md rendered as the privacy page.
 #
 #   scripts/privacy-page.sh [outdir]   default outdir: _site
 #
+#   <outdir>/index.html     the landing page, copied from site/ with its images
 #   <outdir>/privacy.html   served at https://timer.reckonry.ai/privacy
-#   <outdir>/index.html     sends the bare domain to /privacy
 #
 # Uses GitHub's Markdown API through gh, so it needs gh signed in (GH_TOKEN in Actions).
 set -euo pipefail
@@ -36,18 +37,14 @@ cat > "$OUT/privacy.html" <<EOF
 </head>
 <body>
 <main>
+<p><a href="/">Reckonry Timer for Karbon</a></p>
 $body
 </main>
 </body>
 </html>
 EOF
 
-cat > "$OUT/index.html" <<'EOF'
-<!doctype html>
-<meta charset="utf-8">
-<title>Reckonry Timer for Karbon</title>
-<meta http-equiv="refresh" content="0; url=/privacy">
-<a href="/privacy">Privacy policy</a>
-EOF
+# The landing page is plain files; copy them as they are.
+cp -R site/. "$OUT/"
 
-echo "Wrote $OUT/privacy.html and $OUT/index.html"
+echo "Wrote $OUT/privacy.html and the landing page from site/"
