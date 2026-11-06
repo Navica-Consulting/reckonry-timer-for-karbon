@@ -304,6 +304,7 @@ async function openSignIn() {
 // tab has the content script yet. A short-lived background tab lets Karbon boot and report its keys.
 let probing = null;
 let probe = { tabId: null, out: false };
+let installTab = null;   // the Karbon tab opened on install; the probe watches it instead of opening another
 function probeKarbon() {
   if (!probing) probing = probeKarbonOnce().finally(() => { probing = null; probe = { tabId: null, out: false }; });
   return probing;
@@ -311,7 +312,8 @@ function probeKarbon() {
 
 async function probeKarbonOnce() {
   const { tenant } = await chrome.storage.local.get('tenant');
-  const tab = await chrome.tabs.create({ url: tenant ? `${KARBON}${tenant}/` : KARBON, active: false });
+  const own = installTab && (await chrome.tabs.get(installTab).catch(() => null));
+  const tab = own || (await chrome.tabs.create({ url: tenant ? `${KARBON}${tenant}/` : KARBON, active: false }));
   probe = { tabId: tab.id, out: false };
   try {
     // Karbon rewrites its bootstrap cookie (7-day life, not renewed on load) while it boots, after
@@ -327,7 +329,8 @@ async function probeKarbonOnce() {
       if (keysAt !== null && i - keysAt >= 6) break;
     }
   } finally {
-    await chrome.tabs.remove(tab.id).catch(() => {});
+    // The install tab is the person's Karbon tab now; only a tab the probe opened is closed.
+    if (!own) await chrome.tabs.remove(tab.id).catch(() => {});
   }
   return learnAccount();
 }
@@ -698,7 +701,17 @@ async function learnAccount(fromPage = null) {
   if (firmName) keep.firmName = firmName;
   await chrome.storage.local.set({ ...keep, cookieNote, keySource: fromPage && k === fromPage ? 'tab' : 'cookie', directApi: { ...direct, at: Date.now() } });
   await setSignedIn(!signedOut);
+  if (!signedOut) warmLists().catch(() => {});
   return { signedIn: !signedOut, direct };
+}
+
+// Fetches the role and task type lists once the account is known, so the panel, finish form,
+// and presets have them right after install instead of after a Karbon refresh.
+async function warmLists() {
+  const { lookups } = await chrome.storage.local.get('lookups');
+  if (lookups && lookups.roles && lookups.roles.length) return;
+  const r = await toKarbon('lookups', {});
+  if (r.ok && (r.result.roles.length || r.result.taskTypes.length)) await chrome.storage.local.set({ lookups: r.result });
 }
 
 chrome.cookies.onChanged.addListener(({ cookie }) => {
@@ -754,7 +767,12 @@ chrome.runtime.onInstalled.addListener(async ({ reason, previousVersion }) => {
   // 0.7.1: the default work item was removed.
   await chrome.storage.local.remove('defaultWork');
   await chrome.storage.sync.remove(['autoStart', 'noTimerAction', 'dwellSeconds', 'toastSeconds'].filter((k) => old[k] !== undefined));
-  if (reason === 'install') chrome.tabs.create({ url: 'welcome.html' });
+  if (reason === 'install') {
+    // Karbon tabs open before the install have no content script, and a fresh Karbon page lets the
+    // extension learn the account and lists. Open one behind the setup page.
+    await chrome.tabs.create({ url: 'welcome.html' });
+    installTab = (await chrome.tabs.create({ url: KARBON, active: false })).id;
+  }
   boot();
 });
 chrome.runtime.onStartup.addListener(boot);

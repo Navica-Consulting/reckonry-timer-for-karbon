@@ -35,7 +35,7 @@ or taken down:
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
 
-## Data inventory (as of 0.7.37)
+## Data inventory (as of 0.7.38)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -130,6 +130,13 @@ the other settings. It is not in the feedback form, the email draft, or Copy det
 use calls the extension already makes (start, stop and save, and the stopwatch update). No new
 permissions, host access, or network calls. The policy's open item on Chrome Sync now covers this
 key too, so the policy needs no separate change.
+
+Install connection review (2026-11-06, 0.7.38): a fresh install now opens Karbon
+(`app2.karbonhq.com`) in a new background tab behind the setup page, and leaves it open. The
+setup probe watches that tab instead of opening its own. Once the account is known, the background
+fetches the role and task type lists it already fetched from the panel and stores them in the
+existing `lookups` key. Same destination, same calls, no new permissions, host access, storage
+keys, or kinds of data. No inventory change.
 
 ## Hosting setup (done 2026-10-24)
 

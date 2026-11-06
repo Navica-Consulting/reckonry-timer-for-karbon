@@ -244,6 +244,13 @@ $('scAdd').addEventListener('click', async () => {
   names[names.length - 1].focus();
 });
 
+// The lists can arrive after this page opens, once the background connects to Karbon.
+chrome.storage.onChanged.addListener((c, area) => {
+  if (area !== 'local' || !c.lookups || !c.lookups.newValue) return;
+  scLists = c.lookups.newValue;
+  if (!$('scList').contains(document.activeElement)) scRender();
+});
+
 // Changes from another window show here, unless you're editing a row.
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area !== 'sync' || !c.presets || $('scList').contains(document.activeElement)) return;
