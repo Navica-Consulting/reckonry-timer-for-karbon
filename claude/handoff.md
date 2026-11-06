@@ -1,7 +1,7 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.38 (open Karbon on install) is built and committed, not tagged or uploaded.
+Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.38 (open Karbon on install) is built and committed, not tagged or uploaded.
 
 ## Next step
 Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpacked/production` again. That counts as a fresh install. The setup page should open with Karbon in a new tab behind it, step 2 should connect, and the Presets card should list roles and task types without refreshing anything. If it works, tag `v0.7.38` and upload `dist/reckonry-timer-for-karbon-0.7.38.zip` by hand.
@@ -17,6 +17,7 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review. It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
 
 ## Open threads
+- Landing page copy: timer.reckonry.ai says "it's free" in the button and FAQ, though the monetization model isn't decided. Real customer stories would replace the typical scenarios in Use cases (waiting on: Max).
 - Install connection: 0.7.38 opens Karbon in a new background tab on a fresh install and leaves it open, since Chrome doesn't add content scripts to Karbon tabs that were already open. The setup probe watches that tab instead of opening its own. The background fetches the role and task type lists once the account is known, and the settings page's Presets card picks them up when they arrive. Step 2's text asks people to refresh Karbon tabs they had open before installing. Tested in Node with stubbed Chrome APIs (install and update paths), not in Chrome (waiting on: Max's test).
 - Help copy: the settings page's help text and FAQ answers (in `src/welcome.html`) were drafted by Claude in 0.7.14 and never reviewed word for word. Worth a read before listing publicly (waiting on: Max, low priority).
 - Time entry rules (internal vs. client roles and task types, and a confirm step for time logged straight to a contact): planned on 2026-11-05 in `artifacts/time-entry-rules-plan.md`, then parked by Max as high effort for moderate gain (waiting on: Max, if it comes back).
@@ -47,13 +48,15 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - 2026-10-24: Host the privacy policy on GitHub Pages at timer.reckonry.ai/privacy, republished on each version tag. The old Google Site links to it for older versions (Max).
 - 2026-10-24: Skip 0.7.4. The first update after 0.6.1 is 0.7.30 (Max).
 - 2026-10-24: Send 0.7.31 instead of 0.7.30 (Max).
+- 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
 ### 2026-11-06, landing page (Claude Code)
 - Max asked for a landing page at timer.reckonry.ai with screenshots, copy, use cases, and links to the privacy policy and the store.
 - New `site/index.html` (no outside scripts or fonts) and `site/img/`, cropped from the store screenshots. The use-case stories are labeled as typical scenarios, not quotes. Max reviewed the draft.
-- `scripts/privacy-page.sh` now copies `site/` into the Pages build in place of the redirect, and the privacy page links back home. It deploys on the next `v*` tag or a manual run of the Privacy page workflow.
-- Open: the page says "free" though monetization isn't decided, and the store link needs the listing public (waiting on: Max).
+- `scripts/privacy-page.sh` now copies `site/` into the Pages build in place of the redirect, and the privacy page links back home. Committed `e3f8de8`, pushed, and deployed by a manual run of the Privacy page workflow. The home page, `/privacy`, the images, and the store link all checked out live.
+- Docs: README, root `CLAUDE.md`, `docs/RELEASING.md`, and `docs/PRIVACY.md` describe `site/`. Any analytics, outside scripts, or forms on the site are now a privacy review trigger.
+- Open: the page says "free" in two places though monetization isn't decided, and it links to an unlisted store listing (waiting on: Max).
 
 ### 2026-11-06, store release, open items, and install connection (Claude Code)
 - Max reported 0.7.37 live and unlisted in the store, tested on the live tenant, and closed most open threads (see Closed on 2026-11-06).

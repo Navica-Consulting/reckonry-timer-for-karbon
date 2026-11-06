@@ -19,7 +19,8 @@ or taken down:
 - `docs/privacy-policy.md` holds the current policy text, so every change is a reviewed diff.
   The Privacy page workflow (`.github/workflows/privacy-page.yml`) renders it with
   `scripts/privacy-page.sh` and publishes it to GitHub Pages on every version tag. To publish a
-  policy fix between releases, run that workflow by hand from Actions.
+  policy fix between releases, run that workflow by hand from Actions. The same workflow publishes
+  the landing page in `site/` at the bare domain.
 - Bump the effective date in the policy on every substantive change, and add a line to the
   change log below.
 - A pull request or commit that touches any of the triggers below must update this file's
@@ -34,6 +35,8 @@ or taken down:
 - A new network destination (`fetch`, `XMLHttpRequest`, `mailto:`, links that carry data).
 - Reading new data from Karbon pages, cookies, or requests.
 - Anything that sends data off the device other than to Karbon.
+- Adding analytics, outside scripts, fonts, or forms to the landing page in `site/`. Today it
+  loads only its own files and collects nothing.
 
 ## Data inventory (as of 0.7.38)
 

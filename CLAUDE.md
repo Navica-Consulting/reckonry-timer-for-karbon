@@ -9,6 +9,8 @@ Settled decisions are in `claude/context/`, and Karbon's endpoints are in
 - Edit only `src/`. `./build.sh` writes `unpacked/production` (app2.karbonhq.com),
   `unpacked/stage` (webapp-stage.karbonhq.com), and zips in `dist/`. Never hand-edit the build
   output, and never publish the stage build.
+- The landing page at timer.reckonry.ai is `site/`, deployed with the privacy policy by the
+  Privacy page workflow. Keep it free of outside scripts, fonts, and analytics.
 - `build.sh` rewrites `config.js` (`KT_ORIGIN`) and the manifest's host permissions and content
   script matches per target, so change both together.
 - Bump `version` in `src/manifest.json` for every build you hand over; tag releases `v<version>`.

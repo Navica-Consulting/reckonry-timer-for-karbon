@@ -20,8 +20,8 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
    submits it for review only when the repository variable `CWS_AUTO_PUBLISH` is `true`. It's
    unset since 2026-10-24, so upload by hand (below) and paste
    [store-privacy-tab.md](store-privacy-tab.md) into the Privacy practices tab. The Privacy page
-   workflow publishes `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy from the same
-   tag. Check both runs under Actions on GitHub.
+   workflow publishes `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy, and the
+   landing page in `site/` to https://timer.reckonry.ai, from the same tag. Check both runs under Actions on GitHub.
 
 A new version can't be submitted while another is still in review, so wait for approval before
 tagging. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub

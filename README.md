@@ -10,6 +10,8 @@ build.sh        Builds both targets from src/.
 unpacked/       Build output for Load unpacked (production and stage). Not tracked.
 dist/           Versioned zips for upload. Not tracked.
 docs/           Release process and privacy policy tracking.
+site/           Landing page for timer.reckonry.ai. Plain HTML, no outside scripts.
+store/          Store listing text, icon, and screenshot renderer.
 ```
 
 ## Build
@@ -25,6 +27,16 @@ This writes:
 - `dist/reckonry-timer-for-karbon-<ver>.zip`: the store upload.
 
 In Chrome, open `chrome://extensions`, turn on Developer mode, and Load unpacked each folder once. After that, rerun `./build.sh` and click Reload.
+
+## Website
+
+https://timer.reckonry.ai is GitHub Pages. `scripts/privacy-page.sh` copies `site/` and renders `docs/privacy-policy.md` as `/privacy`. The Privacy page workflow deploys it on every version tag, or run it by hand from Actions to publish a site change sooner.
+
+To preview `site/` locally:
+
+```bash
+python3 -m http.server 8796 --directory site
+```
 
 ## Releasing
 
