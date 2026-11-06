@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Small promo tile</title>
+<link rel="stylesheet" href="shots.css">
+<style>
+  /* 440x280 tile: the name and one line, with the timer card bleeding off the right edge. */
+  html, body { width:440px; height:280px; }
+  .copy { left:28px; width:220px; }
+  .eyebrow { margin-bottom:14px; }
+  .eyebrow img { width:44px; height:44px; border-radius:11px; padding:4px; }
+  .copy h1 { font-size:27px; line-height:1.1; margin:0 0 10px; }
+  .copy p { font-size:14px; line-height:1.35; }
+  .popup { right:auto; left:262px; top:34px; border-radius:10px; transform-origin:top left; }
+</style>
+</head>
+<body>
+<div class="copy">
+  <div class="eyebrow"><img src="../src/icons/icon128-face.png" alt=""></div>
+  <h1>Reckonry Timer for Karbon</h1>
+  <p>Auto-start, auto-switch, and away pause.</p>
+</div>
+<div class="popup scale" style="--s:.92"><iframe src="../src/popup.html?shot=1" title="Toolbar panel"></iframe></div>
+<script src="frame.js"></script>
+</body>
+</html>

@@ -41,7 +41,7 @@
     // The timer card's notes after a lock pause and its resume.
     5: { state: { ...onW1, state: 'Started', taskTypeKey: 't1', recordedSeconds: 3120, startDateTime: ago(1260),
       description: `${stamp(14, 58, 'Timer paused: screen locked')}\n${stamp(15, 12, 'Timer resumed: screen unlocked')}` },
-      after: () => { $('curNotes').style.height = '104px'; } },
+      sync: {}, after: () => { $('curNotes').style.height = '104px'; } },
     // The settings page, open to Away from the computer.
     settings: { state: { state: 'Stopped' },
       after: () => setTimeout(() => { document.documentElement.style.scrollBehavior = 'auto'; $('g-away').scrollIntoView({ block: 'start' }); }, 600) },
@@ -55,7 +55,12 @@
     directApi: { ok: true }, directWrites: { ok: true }, roleKey: 'r1', taskTypeKey: 't1',
     ...scene.local,
   };
-  const sync = {};
+  // Presets show in the timer card and the start form, unless a scene sets its own sync.
+  const sync = scene.sync || { presets: [
+    { id: 'p1', name: 'Prep', roleKey: 'r1', taskTypeKey: 't1' },
+    { id: 'p2', name: 'Client meeting', roleKey: 'r2', taskTypeKey: 't3' },
+    { id: 'p3', name: 'Review', roleKey: 'r3', taskTypeKey: 't2' },
+  ] };
 
   const cmd = (c, a) => {
     if (c === 'getState') return { ok: true, result: { ...S } };
@@ -84,7 +89,7 @@
     return null;
   };
   window.chrome = {
-    runtime: { sendMessage: msg, onMessage: ev, getManifest: () => ({ version: '0.7.29', name: 'Reckonry Timer for Karbon' }), getURL: (p) => p },
+    runtime: { sendMessage: msg, onMessage: ev, getManifest: () => ({ version: '0.7.37', name: 'Reckonry Timer for Karbon' }), getURL: (p) => p },
     storage: { local: area(local, 'local'), sync: area(sync, 'sync'), session: area({}, 'session'), onChanged: { addListener: (f) => listeners.push(f) } },
     tabs: { query: async () => [], create() {}, reload() {} },
     action: { getUserSettings: async () => ({ isOnToolbar: true }) },
