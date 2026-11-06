@@ -200,7 +200,7 @@ async function readyTabOnce(stale) {
 }
 
 // Actions may open or reload Karbon; reads never do.
-const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume', 'search', 'recents']);
+const NEEDS_TAB = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume', 'search', 'recents', 'clientWork']);
 const WRITES = new Set(['start', 'pause', 'resume', 'stopAndSave', 'discard', 'appendNote', 'edit', 'autoPause', 'autoResume']);
 
 // UNREACHABLE means neither Karbon's API nor a Karbon tab answered a read.

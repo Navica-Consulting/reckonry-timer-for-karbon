@@ -381,7 +381,7 @@ const cur = {};
 function pickedWork(fields, item) {
   if (!workOnly() && !fields.client.item) fillClient(fields.client, item.client);
 }
-const scopeOf = (fields) => () => (!workOnly() && fields.client.item ? fields.client.item.title : null);
+const scopeOf = (fields) => () => (!workOnly() && fields.client.item ? fields.client.item : null);
 
 function buildFields() {
   const both = !workOnly();

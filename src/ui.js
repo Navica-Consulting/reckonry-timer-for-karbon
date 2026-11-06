@@ -82,7 +82,7 @@ function clickToChange(box, label, fn) {
 // Karbon books a timer to one thing: a work item, or a client where the firm allows it.
 // Each field shows its pick in a box (click it to search again, x to clear), or a search box whose results drop down.
 // o: { id, label, kind: 'work' | 'contact', onPick(item), onClear(), onError(reply), describedBy,
-//      scope(): for Work, the client whose work to search, or null for all work }
+//      scope(): for Work, the client item whose work to search, or null for all work }
 // Uses the page's send().
 function pickField(host, o) {
   const ids = { q: `${o.id}Q`, combo: `${o.id}Combo`, drop: `${o.id}Drop`, head: `${o.id}Head`, list: `${o.id}List` };
@@ -101,16 +101,34 @@ function pickField(host, o) {
 
   const f = { item: null, editing: false, q, box, ids };
   const fail = (r) => { $(ids.head).textContent = ''; if (o.onError) o.onError(r); };
-  const rows = (head, items) => {
+  // Shows the first `shown` items, with Load more for the rest.
+  const rows = (head, items, shown = items.length) => {
     $(ids.head).textContent = head;
-    $(ids.list).replaceChildren(...items.map((it) => el('li', {}, pickRow(it, () => f.pick(it)))));
+    const lis = items.slice(0, shown).map((it) => el('li', {}, pickRow(it, () => f.pick(it))));
+    if (items.length > shown) {
+      lis.push(el('li', {}, el('button', { type: 'button', class: 'item more',
+        onclick: () => { rows(head, items, shown + MORE_STEP); $(ids.list).querySelectorAll('button.item')[shown]?.focus(); } }, 'Load more')));
+    }
+    $(ids.list).replaceChildren(...lis);
   };
-  // With a client set, Work lists only that client's work. Karbon gives a work item's client by name only.
+  // With a client set, Work lists that client's work. A client known by name only (its key not found yet)
+  // falls back to matching search results by client name.
   const scope = () => (o.scope && o.scope()) || null;
   const scoped = (items) => {
     const c = scope();
-    const ofClient = (it) => it.client === c;
-    return c ? items.filter(ofClient).slice(0, 6) : items.slice(0, 6);
+    return c ? items.filter((it) => it.client === c.title) : items;
+  };
+  // One client's work, kept for a minute so typing filters it without asking Karbon again.
+  let cache = null;
+  const clientWork = async (c) => {
+    if (cache && cache.key === c.key && Date.now() - cache.at < 60000) return { ok: true, result: cache.result };
+    const r = await send('clientWork', { client: c.key, linkType: c.linkType });
+    if (!r || !r.ok) return r;
+    // Under each item: its start date, plus its client for a group, whose work spans its members.
+    const group = c.linkType === 'ClientGroup';
+    r.result.items.forEach((it) => { it.subtitle = [group ? it.client : '', startLabel(it)].filter(Boolean).join(' · '); });
+    cache = { key: c.key, at: Date.now(), result: r.result };
+    return r;
   };
 
   // Shows an item in the box, or the empty search box. Skipped while you're searching, unless forced.
@@ -139,33 +157,54 @@ function pickField(host, o) {
   };
   f.invalid = (on) => (on ? q.setAttribute('aria-invalid', 'true') : q.removeAttribute('aria-invalid'));
 
-  // Work shows recent work items before you type. Karbon has no recents list for clients.
+  // Work shows recent work items before you type, or with a client set, that client's current work.
+  // Karbon has no recents list for clients.
   f.recents = async (force) => {
     if (o.kind !== 'work') return rows('', []);
+    const c = scope();
     if (!force && !(await chrome.runtime.sendMessage({ type: 'canReach' }))) {
       $(ids.head).replaceChildren(el('button', { type: 'button', class: 'linklike', onclick: () => f.recents(true) }, 'Show recent work items'));
       $(ids.list).replaceChildren();
       return;
     }
+    if (c && c.key) {
+      const mine = ++seq;
+      $(ids.head).textContent = `Loading work for ${c.title}.`;
+      const r = await clientWork(c);
+      if (mine !== seq) return;
+      if (!r || !r.ok) return fail(r);
+      const { now, later } = splitWork(r.result.items);
+      const head = now.length ? `Current work for ${c.title}` : later.length ? `No current work for ${c.title}.` : `No work for ${c.title}.`;
+      return rows(head, now.concat(later), now.length);
+    }
     $(ids.head).textContent = 'Loading recent work items.';
-    const r = await send('recents', { take: scope() ? 25 : 6 });
+    const r = await send('recents', { take: c ? 25 : 6 });
     if (!r || !r.ok) return fail(r);
-    const items = scoped(r.result);
-    const c = scope();
-    rows(items.length ? (c ? `Recent work for ${c}` : 'Recent work items') : (c ? `No recent work for ${c}. Search for it.` : 'No recent work items.'), items);
+    const items = scoped(r.result).slice(0, 6);
+    rows(items.length ? (c ? `Recent work for ${c.title}` : 'Recent work items') : (c ? `No recent work for ${c.title}. Search for it.` : 'No recent work items.'), items);
   };
 
   let seq = 0;
   let debounce = null;
   const search = async (term) => {
     const mine = ++seq;
+    const c = o.kind === 'work' ? scope() : null;
     $(ids.head).textContent = 'Searching.';
-    const r = await send('search', { term, kind: o.kind, take: scope() ? 25 : 6 });
+    // A client's work is searched in full here, current work first.
+    if (c && c.key) {
+      const r = await clientWork(c);
+      if (mine !== seq) return;
+      if (!r || !r.ok) return fail(r);
+      const { now, later } = splitWork(r.result.items.filter(matches(term)));
+      const items = now.concat(later);
+      return rows(items.length ? count(items.length) : `No matching work for ${c.title}.`, items, MORE_STEP);
+    }
+    const r = await send('search', { term, kind: o.kind, take: o.kind === 'work' ? 25 : 6 });
     if (mine !== seq) return;
     if (!r || !r.ok) return fail(r);
-    const items = o.kind === 'work' ? scoped(r.result) : r.result;
-    const none = scope() ? `No matching work for ${scope()}.` : 'No matches.';
-    rows(items.length ? `${items.length} result${items.length === 1 ? '' : 's'}` : none, items);
+    // Karbon's search gives no dates, so open work goes first, then planned, then completed.
+    const items = o.kind === 'work' ? rankByStatus(scoped(r.result)) : r.result;
+    rows(items.length ? count(items.length) : c ? `No matching work for ${c.title}.` : 'No matches.', items, MORE_STEP);
   };
 
   clickToChange(box, `Change ${noun}`, f.edit);
@@ -192,6 +231,35 @@ function pickField(host, o) {
     box.focus();
   });
   return f;
+}
+
+// ---- Ordering work ----
+const MORE_STEP = 8;
+const count = (n) => `${n} result${n === 1 ? '' : 's'}`;
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+// Every word of the search appears in the title, in any order.
+const matches = (term) => {
+  const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+  return (it) => { const t = (it.title || '').toLowerCase(); return words.every((w) => t.includes(w)); };
+};
+// Current work is open and already started. Both parts run newest start date first.
+function splitWork(items) {
+  const t = today();
+  const newest = (a, b) => (b.start || '').localeCompare(a.start || '');
+  const now = items.filter((it) => !it.done && it.start && it.start <= t).sort(newest);
+  const later = items.filter((it) => !now.includes(it)).sort(newest);
+  return { now, later };
+}
+function startLabel(it) {
+  if (!it.start) return '';
+  const d = new Date(`${it.start}T12:00:00`);
+  const opts = { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) };
+  const when = d.toLocaleDateString(undefined, opts);
+  return it.done ? `Completed · started ${when}` : it.start > today() ? `Starts ${when}` : `Started ${when}`;
+}
+function rankByStatus(items) {
+  const rank = (it) => (it.status === 'Completed' ? 2 : it.status === 'Planned' ? 1 : 0);
+  return items.map((it, i) => [it, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([it]) => it);
 }
 
 // A work item names its client but doesn't carry its key. Finds the client by an exact name match.

@@ -71,7 +71,8 @@ function KTKarbon(env) {
     };
   }
 
-  async function call(method, path, body) {
+  // read: a POST that only asks for data, so it doesn't count as a change.
+  async function call(method, path, body, { read = false } = {}) {
     const where = `${method} ${path.split('/').slice(1, 4).join('/')}`;
     let res;
     try {
@@ -89,7 +90,7 @@ function KTKarbon(env) {
     // Karbon refused a call that didn't come from its own page.
     if (res.status === 403) throw unreachable(`Karbon returned ${res.status} for ${where}`);
     if (!res.ok) throw new Error(`Karbon returned ${res.status} for ${where}`);
-    if (method !== 'GET') writes++;
+    if (method !== 'GET' && !read) writes++;
     const text = await res.text();
     if (!text) return null;
     try {
@@ -321,7 +322,7 @@ function KTKarbon(env) {
   }
 
   // ---- Finding things to time ----
-  const ACTIVE_STATUSES = ['InProgress', 'Waiting', 'ReadyToStart', 'Planned'];
+  const ALL_STATUSES = ['InProgress', 'Waiting', 'ReadyToStart', 'Planned', 'Completed'];
   const LINK_TYPES = { WorkItem: 'WorkItem', contact: 'Contact', organization: 'Organization', 'client-group': 'ClientGroup' };
 
   // A work result's subtitle reads "Client - Assigned to Name". Only the client is shown or used.
@@ -329,13 +330,13 @@ function KTKarbon(env) {
 
   async function search({ term, kind = 'work', take = 6 }) {
     const q = new URLSearchParams({ searchTerm: term, skip: '0', take: String(take), filterType: kind, showEmailAsSubtitle: 'false' });
-    if (kind === 'work') ACTIVE_STATUSES.forEach((s) => q.append('statuses[]', s));
+    if (kind === 'work') ALL_STATUSES.forEach((s) => q.append('statuses[]', s));
     const j = await call('GET', `/search/api/${K.tenant}/globalSearchItems?${q}`);
     return ((j && j.globalSearchItems) || [])
       .filter((x) => LINK_TYPES[x.entityType])
       .map((x) => {
         const client = x.entityType === 'WorkItem' ? workClient(x) : '';
-        return { key: x.id, linkType: LINK_TYPES[x.entityType], title: x.title, subtitle: client || x.subtitle || '', client };
+        return { key: x.id, linkType: LINK_TYPES[x.entityType], title: x.title, subtitle: client || x.subtitle || '', client, status: x.workItemStatus || null };
       });
   }
 
@@ -345,6 +346,27 @@ function KTKarbon(env) {
       key: x.id, linkType: 'WorkItem', title: x.entityName, subtitle: x.workItemClientName || '', client: x.workItemClientName || '',
     }));
   }
+
+  // ---- One client's work, as on the client's Work tab ----
+  // Captured 2026-11-06: POST /todo/api/{tenant}/workViewListItems, filtered by `client` (a person or an
+  // organization) or `clientgroup` (a group, with its members' work). Empty status lists mean every status.
+  // Pages of 40, up to `max` items. done: completed; start: the start date (YYYY-MM-DD).
+  async function clientWork({ client, linkType, max = 400 }) {
+    const by = linkType === 'ClientGroup' ? 'clientgroup' : 'client';
+    const items = [];
+    for (let skip = 0; skip < max; skip += 40) {
+      const body = { take: 40, skip, [by]: [client], listSortBy: 'status', sortDescending: false, status: [], impliedStatus: [] };
+      const page = ((await call('POST', `/todo/api/${K.tenant}/workViewListItems`, body, { read: true })) || {}).workViewListItems || [];
+      items.push(...page);
+      if (page.length < 40) return { items: items.map(workRow), more: false };
+    }
+    return { items: items.map(workRow), more: true };
+  }
+  const workRow = (x) => ({
+    key: x.workItemPermaKey, linkType: 'WorkItem', title: x.workItemTitle, subtitle: x.clientDisplayName || '',
+    client: x.clientDisplayName || '', status: x.workItemStatus || null,
+    done: !!x.completedDate || x.workItemStatus === 'Completed', start: (x.startDate || '').slice(0, 10) || null,
+  });
 
   // ---- Role and task type lists, for the start panel ----
   // Captured 2026-10-23:
@@ -403,7 +425,7 @@ function KTKarbon(env) {
 
   const COMMANDS = {
     getState, start, pause, resume, appendNote, edit, autoPause, autoResume, stopAndSave, discard,
-    search, recents, lookups, timeSettings, prefill,
+    search, recents, clientWork, lookups, timeSettings, prefill,
   };
 
   // Runs one command. Timer results go out in the extension's short form.

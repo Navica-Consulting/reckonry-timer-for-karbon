@@ -90,7 +90,7 @@ function buildFields() {
   F.client = pickField($('clientField'), { id: 'client', label: 'Client', kind: 'contact', describedBy: 'workErr',
     onPick: pickClient, onClear: () => { F.work.show(null, true); cleared(); } });
   F.work = pickField($('workField'), { id: 'work', label: 'Work', kind: 'work', describedBy: 'workErr',
-    scope: () => (!workOnly() && F.client.item ? F.client.item.title : null), onPick: pickWork, onClear: cleared });
+    scope: () => (!workOnly() && F.client.item ? F.client.item : null), onPick: pickWork, onClear: cleared });
   $('clientField').hidden = !both;
 }
 

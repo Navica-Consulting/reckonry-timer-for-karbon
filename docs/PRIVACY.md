@@ -38,7 +38,7 @@ or taken down:
 - Adding analytics, outside scripts, fonts, or forms to the landing page in `site/`. Today it
   loads only its own files and collects nothing.
 
-## Data inventory (as of 0.7.38)
+## Data inventory (as of 0.7.39)
 
 | Data | Source | Where it's kept | Leaves the device? |
 |---|---|---|---|
@@ -140,6 +140,13 @@ setup probe watches that tab instead of opening its own. Once the account is kno
 fetches the role and task type lists it already fetched from the panel and stores them in the
 existing `lookups` key. Same destination, same calls, no new permissions, host access, storage
 keys, or kinds of data. No inventory change.
+
+Client work list review (2026-11-06, 0.7.39): with a client chosen, the Work field asks Karbon for
+that client's work with `POST /todo/api/{tenant}/workViewListItems` on the regional API host, the
+call Karbon's own client Work tab makes. It only reads. The answer (work titles, client names, start
+dates, status) is shown in the list and kept in the page's memory for a minute, never stored. Work
+search with no client now includes completed work. Same destination and the same kind of data as
+search. No new permissions, host access, or storage keys. No inventory change.
 
 ## Hosting setup (done 2026-10-24)
 

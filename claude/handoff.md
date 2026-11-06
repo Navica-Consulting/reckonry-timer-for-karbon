@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.38 (open Karbon on install) is built and committed, not tagged or uploaded.
+Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.38 (open Karbon on install) and 0.7.39 (client work list in the Work field) are built and committed, not tagged or uploaded.
 
 ## Next step
-Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpacked/production` again. That counts as a fresh install. The setup page should open with Karbon in a new tab behind it, step 2 should connect, and the Presets card should list roles and task types without refreshing anything. If it works, tag `v0.7.38` and upload `dist/reckonry-timer-for-karbon-0.7.38.zip` by hand.
+Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpacked/production` again. That counts as a fresh install. The setup page should open with Karbon in a new tab behind it, step 2 should connect, and the Presets card should list roles and task types without refreshing anything. Also test 0.7.39: pick a client, open Work, use Load more, and type a search; try a client group too. If both work, tag `v0.7.39` and upload `dist/reckonry-timer-for-karbon-0.7.39.zip` by hand.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -24,7 +24,7 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - Signed out of Karbon: 0.7.19 hides the timer when signed out and offers a Sign in button. It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured (waiting on: a live sign-out test).
 - Multiple tenants: the bootstrap cookie names the user's default tenant, and a Karbon tab's URL wins for that tab. Not tested with a user in several tenants. Not critical now, since most firms don't work that way, but needed before a Karbon-wide release (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
-- Client and Work fields: with a client chosen, Work lists that client's work by name-matching global search results (up to 25), which can miss work and doesn't match client groups. Captured on 2026-11-06: a client's Work tab uses `POST /todo/api/{tenant}/workViewListItems` filtered by the client's key (`client` for a person or organization, `clientgroup` for a group), and a group's list includes its members' work. Details in `artifacts/capture-summary.md`. Switching the Work field to it is not built yet (waiting on: Max's go-ahead).
+- Client and Work fields: 0.7.39 lists a chosen client's work from `workViewListItems` by the client's key (person, organization, or client group), current work first with Load more for the rest, all newest start date first. Typing searches all of the client's work, current first. With no client, search includes completed work and puts open work first. Behavior in `context/timer-behavior.md`. Tested in the browser pane with stubbed Chrome APIs only, not on live Karbon (waiting on: Max's test).
 - Trademark and listing name: Karbon's brand guide (`~/Documents/Dev Projects/Brand Guides/Karbon/.../karbon-logo-guidance.pdf`, 2025) covers only the logo and monogram. The extension uses neither: its icon is a stopwatch, and the listing says it is independent and not endorsed by Karbon. The guide says nothing about naming a product "for Karbon". For certainty, ask Ian Clazie, Karbon's design director, named in the guide as the contact (waiting on: Max, optional).
 - Monetization model: not decided. Claude suggested launching free as a lead source for Navica, Reckonry, and Liminos, with a possible paid firm-admin tier later (waiting on: Max).
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it (waiting on: Max).
@@ -51,6 +51,11 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-06, client work list (Claude Code)
+- Captured the call behind a client's Work tab with Max in Chrome, read-only: `workViewListItems`, with `client` for a person or organization and `clientgroup` for a group. Recorded in `artifacts/capture-summary.md`.
+- Max asked for the Work field to show a client's current work first (open, started), Load more for the rest, typed search over all of the client's work with current first, and newest start date first throughout. Built as 0.7.39: `clientWork` in `src/karbon.js`, ordering and Load more in `pickField` (`src/ui.js`). A read-only POST no longer counts as a write. Privacy review in `docs/PRIVACY.md`.
+- Tested in the browser pane with stubbed Chrome APIs: default list, Load more, client search, search with no client, start date labels. Not tested on live Karbon.
+
 ### 2026-11-06, landing page (Claude Code)
 - Max asked for a landing page at timer.reckonry.ai with screenshots, copy, use cases, and links to the privacy policy and the store.
 - New `site/index.html` (no outside scripts or fonts) and `site/img/`, cropped from the store screenshots. The use-case stories are labeled as typical scenarios, not quotes. Max reviewed the draft.
