@@ -104,9 +104,10 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
 - Verified 2026-10-24 (0.7.18): the extension's background worker can read and write the stopwatch on `us3.karbonhq.com` with no Karbon tab open. Karbon accepts the extension's origin and needs no CSRF token or connection ID.
 
 ## A client's Work tab (captured 2026-11-06, Max's tenant, read-only)
-- Opening a client's Work tab sends `POST /todo/api/{tenant}/workViewListItems` to the regional API host. Seen on an organization and on a client group.
+- Opening a client's Work tab sends `POST /todo/api/{tenant}/workViewListItems` to the regional API host. Seen on a person, an organization, and a client group.
 - Body: `{ take: 40, skip: 0, <client filter>, listSortBy: "status", sortDescending: false, status: [...], impliedStatus: [...] }`.
-  - The client filter is keyed by kind: `client: [orgKey]` on an organization page, `clientgroup: [groupKey]` on a client group page. A person's page wasn't captured; it most likely uses `client` too.
+  - The client filter is keyed by kind: `client: [key]` for a person (contact) or an organization, and `clientgroup: [groupKey]` for a client group. A person was captured on 2026-11-06 (page `/{tenant}/contacts/{key}/work-view`), with the same body as an organization.
+  - Calling it from the page with the same body, read-only, returned 200 and matched what the tab showed (a person with no work returned an empty list).
   - Default view (active work): `status: ["Planned"]`, `impliedStatus: ["ReadyToStart", "InProgress", "Waiting"]`. With completed work included, both are empty arrays, which means every status.
   - Paging: `take` 40, `skip` grows as the list scrolls.
 - Response: `{ workViewListItems: [...] }`, each with `workItemPermaKey`, `workItemTitle`, `workItemStatus`, `clientPermaKey`, `clientLinkType`, `clientDisplayName`, `clientGroupPermaKey`, `clientGroupName`, `workTemplateTitle`, `startDate`, `dueDate`, `completedDate`, and checklist counts. No search term: the list is filtered by client only.
