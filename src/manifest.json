@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Reckonry Timer for Karbon (beta draft)",
-  "version": "0.7.39",
+  "name": "Reckonry Timer for Karbon (beta)",
+  "version": "0.7.40",
   "description": "Stopwatch tools for the Karbon timer: start from anywhere, auto-switch, reminders, and lock or idle pause.",
   "permissions": [
     "storage",

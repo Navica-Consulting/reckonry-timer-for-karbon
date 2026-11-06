@@ -31,7 +31,7 @@ release or `dist/`, never the `-stage` zip.
 
 ## Before the first public release
 
-- Drop "(beta draft)" from `name` in `src/manifest.json`.
+- Drop "(beta)" from `name` in `src/manifest.json` (it was "(beta draft)" until 0.7.40).
 - Privacy tab changes, such as a justification for a new permission, are always made by hand.
 
 ## Automatic store upload (set up and tested 2026-10-23)
