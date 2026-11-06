@@ -18,8 +18,10 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
 5. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches the
    manifest, builds, and attaches the zips to a GitHub release. It uploads the store zip and
    submits it for review only when the repository variable `CWS_AUTO_PUBLISH` is `true`. It's
-   unset since 2026-10-24, so upload by hand (below) and paste
-   [store-privacy-tab.md](store-privacy-tab.md) into the Privacy practices tab. The Privacy page
+   `true` since 2026-11-06 (first automated submission: 0.7.39), so a tag goes to review on its
+   own. If a version changes permissions, host access, or what data it handles, update
+   [store-privacy-tab.md](store-privacy-tab.md) and the store's Privacy practices tab before
+   tagging. To go back to uploading by hand, run `gh variable set CWS_AUTO_PUBLISH --body false`. The Privacy page
    workflow publishes `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy, and the
    landing page in `site/` to https://timer.reckonry.ai, from the same tag. Check both runs under Actions on GitHub.
 

@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.38 (open Karbon on install) and 0.7.39 (client work list in the Work field) are built and committed, not tagged or uploaded.
+Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.39 (with 0.7.38's install connection and the client work list) passed Max's live test and is tagged `v0.7.39`. It was the first automated store submission: the Release workflow uploaded it and it is pending review (2026-11-06).
 
 ## Next step
-Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpacked/production` again. That counts as a fresh install. The setup page should open with Karbon in a new tab behind it, step 2 should connect, and the Presets card should list roles and task types without refreshing anything. Also test 0.7.39: pick a client, open Work, use Load more, and type a search; try a client group too. If both work, tag `v0.7.39` and upload `dist/reckonry-timer-for-karbon-0.7.39.zip` by hand.
+Wait for 0.7.39 to clear review; with `DEFAULT_PUBLISH` it goes live on its own, still unlisted. Check with the read-only status run (Actions, Release, Run workflow) or the store dashboard. From now on a version tag submits to the store automatically, so tag only versions Max has tested.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -14,23 +14,22 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - Two checkouts: Max's Karbon Mac (`Documents/Projects/Reckonry Timer for Karbon`, synced to OneDrive) and his Linux machine (`~/Documents/Dev Projects/reckonry-timer-for-karbon`, cloned 2026-11-05). GitHub is the only way to move code between them. The OneDrive connector can't read `.js` files. Pull before starting work on either machine.
 - `build.sh` overwrites files and never removes them. A file dropped from `src/` must be removed from the unpacked folders by hand.
 - Git: GitHub repo Navica-Consulting/reckonry-timer-for-karbon, branch `main`. Every version is tagged `v<version>`.
-- Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review. It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
+- Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review (`CWS_AUTO_PUBLISH` is `true` since 2026-11-06). It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
 
 ## Open threads
 - Landing page copy: timer.reckonry.ai says "it's free" in the button and FAQ, though the monetization model isn't decided. Real customer stories would replace the typical scenarios in Use cases (waiting on: Max).
-- Install connection: 0.7.38 opens Karbon in a new background tab on a fresh install and leaves it open, since Chrome doesn't add content scripts to Karbon tabs that were already open. The setup probe watches that tab instead of opening its own. The background fetches the role and task type lists once the account is known, and the settings page's Presets card picks them up when they arrive. Step 2's text asks people to refresh Karbon tabs they had open before installing. Tested in Node with stubbed Chrome APIs (install and update paths), not in Chrome (waiting on: Max's test).
 - Help copy: the settings page's help text and FAQ answers (in `src/welcome.html`) were drafted by Claude in 0.7.14 and never reviewed word for word. Worth a read before listing publicly (waiting on: Max, low priority).
 - Time entry rules (internal vs. client roles and task types, and a confirm step for time logged straight to a contact): planned on 2026-11-05 in `artifacts/time-entry-rules-plan.md`, then parked by Max as high effort for moderate gain (waiting on: Max, if it comes back).
 - Signed out of Karbon: 0.7.19 hides the timer when signed out and offers a Sign in button. It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured (waiting on: a live sign-out test).
 - Multiple tenants: the bootstrap cookie names the user's default tenant, and a Karbon tab's URL wins for that tab. Not tested with a user in several tenants. Not critical now, since most firms don't work that way, but needed before a Karbon-wide release (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
-- Client and Work fields: 0.7.39 lists a chosen client's work from `workViewListItems` by the client's key (person, organization, or client group), current work first with Load more for the rest, all newest start date first. Typing searches all of the client's work, current first. With no client, search includes completed work and puts open work first. Behavior in `context/timer-behavior.md`. Tested in the browser pane with stubbed Chrome APIs only, not on live Karbon (waiting on: Max's test).
 - Trademark and listing name: Karbon's brand guide (`~/Documents/Dev Projects/Brand Guides/Karbon/.../karbon-logo-guidance.pdf`, 2025) covers only the logo and monogram. The extension uses neither: its icon is a stopwatch, and the listing says it is independent and not endorsed by Karbon. The guide says nothing about naming a product "for Karbon". For certainty, ask Ian Clazie, Karbon's design director, named in the guide as the contact (waiting on: Max, optional).
 - Monetization model: not decided. Claude suggested launching free as a lead source for Navica, Reckonry, and Liminos, with a possible paid firm-admin tier later (waiting on: Max).
 - Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it (waiting on: Max).
 - Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a playbook offer with the newsletter invite, separate update and newsletter opt-ins). Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
 
 ### Closed on 2026-11-06
+- Install connection (0.7.38) and the client work list in the Work field (0.7.39): Max tested both live; they work.
 - Store submission: 0.7.37 is live (unlisted), with the Privacy practices tab filled in.
 - Privacy policy: covers the sign-in cookie, the firm name, Chrome Sync of settings and presets, and Karbon's servers.
 - Feedback form: open to anyone, typo fixed (checked 2026-11-06). The Mac checkout's `.claude/launch.json` may still have a `feedback-preview` entry; it's ignored by git, so it's harmless.
@@ -51,6 +50,10 @@ Max tests 0.7.38's install flow: remove the extension, then Load unpacked `unpac
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-06, first automated store release (Claude Code)
+- Max tested 0.7.38 and 0.7.39 live and asked to try the automated store deployment, since no permissions changed (manifest permissions and host access match 0.7.37).
+- A read-only status run showed 0.7.37 published and nothing in review. Set `CWS_AUTO_PUBLISH` to `true`, tagged `v0.7.39`, and the Release run uploaded the zip (`SUCCEEDED`) and submitted it (`PENDING_REVIEW`). `docs/RELEASING.md` now says tags submit on their own.
+
 ### 2026-11-06, client work list (Claude Code)
 - Captured the call behind a client's Work tab with Max in Chrome, read-only: `workViewListItems`, with `client` for a person or organization and `clientgroup` for a group. Recorded in `artifacts/capture-summary.md`.
 - Max asked for the Work field to show a client's current work first (open, started), Load more for the rest, typed search over all of the client's work with current first, and newest start date first throughout. Built as 0.7.39: `clientWork` in `src/karbon.js`, ordering and Load more in `pickField` (`src/ui.js`). A read-only POST no longer counts as a write. Privacy review in `docs/PRIVACY.md`.
