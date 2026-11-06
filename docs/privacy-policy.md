@@ -4,7 +4,7 @@
 
 # Privacy Policy for Reckonry Timer for Karbon
 
-Effective date: November 5, 2026
+Effective date: November 6, 2026
 
 Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This policy explains what the extension handles and what it does not.
 
@@ -12,18 +12,18 @@ Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This pol
 
 To start, pause, and switch your Karbon timer, the extension reads and stores a small amount of information in your browser:
 
-- Your Karbon user and firm identifiers, learned from the Karbon web app or read from a Karbon sign-in cookie. That cookie holds no password or session token. The extension uses no other cookie, and it stores no cookies.
+- Your Karbon user and firm identifiers and your firm's name, learned from the Karbon web app or read from a Karbon sign-in cookie. That cookie holds no password or session token. The extension uses no other cookie, and it stores no cookies.
 - The work item or contact you have open in Karbon, including its address, title, and client name.
 - Your current timer state, default role, task type, and recent work items.
 - The role and task type you last saved on each work item, kept for 100 days, so the timer can fill them in the way Karbon does. Only Karbon's record keys are kept, not names.
-- Your extension settings.
+- Your extension settings and presets.
 - Whether your computer is idle, locked, or was asleep, so the timer can pause.
 
 The extension also observes the Karbon web app's own requests to learn your timer state, and it adds short notes to your time entries when it pauses or resumes a timer.
 
 ## Where your information goes
 
-Everything above is stored only in your browser, using Chrome's extension storage. Timer actions and notes are sent only to Karbon, using your existing Karbon sign-in, so Karbon can record your time.
+Everything above is stored only in your browser, using Chrome's extension storage. The one exception is your settings and presets: if you have Chrome Sync turned on, Chrome copies them to your other computers through your Google account. Timer actions and notes are sent only to Karbon's servers (karbonhq.com), using your existing Karbon sign-in, so Karbon can record your time.
 
 The extension does not send your information to Navica LLC or to anyone else. It has no analytics, tracking, or advertising, and it does not sell or share your data.
 

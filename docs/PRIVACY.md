@@ -140,15 +140,9 @@ from `main` and from `v*` tags. The store listing's privacy policy URL points to
 
 ## Open items
 
-Changes since 0.7.1 that the policy (effective November 5, 2026) may not cover yet:
-
-- 0.7.2 widened host access to `https://*.karbonhq.com/*` and calls Karbon's API from the
-  background worker. Worth naming Karbon's regional API hosts.
-- 0.7.2 stores the firm name for display.
-- Settings and presets (0.7.36) use `chrome.storage.sync`, which Chrome syncs to the
-  user's Google account when Chrome Sync is on. The policy says data stays in the browser's extension storage.
-- In the store dashboard, add a justification for the new `cookies` permission and the wider
-  host permission before submitting 0.7.2 or later.
+None. The 2026-11-06 policy names the firm name, Chrome Sync of settings and presets, and
+Karbon's servers. The store's Privacy practices tab, with the `cookies` and `*.karbonhq.com`
+justifications, was filled in for 0.7.37.
 
 ## Change log
 
@@ -158,3 +152,4 @@ Changes since 0.7.1 that the policy (effective November 5, 2026) may not cover y
 | 2026-10-24 | 0.7.30 | Feedback opens a Google Form with recent errors. Moved to timer.reckonry.ai/privacy. |
 | 2026-10-24 | 0.7.32 | Names the per-work-item role and task type memory used for prefill. |
 | 2026-11-05 | 0.7.37 | Says identifiers are also read from a Karbon sign-in cookie, which holds no password or session token. |
+| 2026-11-06 | 0.7.37 | Names the stored firm name, Chrome Sync of settings and presets, and Karbon's servers as the only destination. |

@@ -1,0 +1,36 @@
+Run your Karbon timer without thinking about it.
+
+Reckonry Timer for Karbon puts a stopwatch for your Karbon timer in your toolbar. It starts, pauses, and switches the timer as you move through your work, so time lands on the right work item with less effort.
+
+WHAT IT DOES
+
+• Start from anywhere. Open the toolbar panel on any site to start, pause, stop, or switch your timer. No Karbon tab needed.
+• Auto-start on work items. Open a work item and the timer starts after a short countdown. Cancel with one click if you are just looking.
+• Auto-switch between items. When you open a different work item, a countdown shows the switch before it happens, so you stay in control.
+• Clients too. If your firm books time to people, organizations, or client groups, choose auto-start, a reminder, or nothing for those pages.
+• Presets. Save a role and task type as a one-click button. Use them for the stages of one job, such as before, during, and after a client session.
+• Smart fill-in. Role and task type fill in the way Karbon's own timer does, following your firm's settings.
+• Edit as you go. Change the work item, role, task type, or notes on a running timer right from the panel.
+• Finish later. Start a timer with nothing chosen. When you stop it, a short form asks for the work item and anything else your firm requires.
+• Pause when you step away. The timer pauses when you lock your screen or the computer sleeps, and it can pause when you are idle. It can resume when you come back.
+• Long-timer alert. Get a notification if a timer runs past the hours you set, so a timer left on over lunch or overnight gets caught.
+• Split at midnight. The timer is saved at 11:59 PM and restarts after midnight, so each day's time lands on the right day.
+• Clear notes. Automatic actions add a short, time-stamped note to the entry, such as "Timer paused: screen locked." Notes never name other work items or clients.
+• Timer badge. See your running time on the toolbar icon, everywhere or only when you are away from Karbon.
+• Keyboard shortcuts. Alt+Shift+K starts, pauses, or resumes the timer. Alt+Shift+T opens the panel.
+
+YOU STAY IN CONTROL
+
+Every automatic action is a setting. Turn each one on or off, and set the countdowns, to match how you work. The settings page explains what each one does and when to change it.
+
+WORKS WITH KARBON AS IT IS
+
+The extension uses the Karbon sign-in already in your browser. There is nothing to connect and no API key to set up. It stays in sync with Karbon's own timer, so a change in any tab shows up everywhere.
+
+PRIVACY
+
+The extension talks only to Karbon. It never sees your password, and it does not send your time entries or client details anywhere else. Settings and timer state stay in Chrome. There is no tracking. If you send feedback, you choose what to include.
+
+Built by Navica LLC.
+
+Reckonry Timer for Karbon is an independent product. It is not made, endorsed, or supported by Karbon. Karbon is a trademark of its owner.
