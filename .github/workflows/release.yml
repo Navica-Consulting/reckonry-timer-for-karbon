@@ -1,6 +1,7 @@
 # On a version tag (v0.7.5 and so on): build and attach the zips to a GitHub release. With the store
 # IDs set and CWS_AUTO_PUBLISH=true, also upload to the Chrome Web Store and submit for review.
-# Run it by hand (Actions, Release, Run workflow) for a read-only check that store sign-in works.
+# Run it by hand (Actions, Release, Run workflow) for a read-only check that store sign-in works,
+# or with action "cancel" to withdraw the version in review so a newer tag can be submitted.
 # Setup steps are in docs/RELEASING.md.
 name: Release
 
@@ -8,6 +9,12 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'status (read-only) or cancel (withdraw the version in review)'
+        default: status
+        type: choice
+        options: [status, cancel]
 
 permissions:
   contents: write   # create the GitHub release
@@ -55,9 +62,10 @@ jobs:
           CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
           CWS_PUBLISH_TYPE: ${{ vars.CWS_PUBLISH_TYPE }}
           CWS_TOKEN: ${{ steps.gcp.outputs.access_token }}
+          ACTION: ${{ inputs.action || 'status' }}
         run: |
           if [ "$IS_TAG" = true ]; then
             scripts/cws-publish.sh "dist/reckonry-timer-for-karbon-$VER.zip"
           else
-            scripts/cws-publish.sh --status
+            scripts/cws-publish.sh "--$ACTION"
           fi

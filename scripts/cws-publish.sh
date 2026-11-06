@@ -3,6 +3,7 @@
 #
 #   scripts/cws-publish.sh dist/reckonry-timer-for-karbon-<ver>.zip
 #   scripts/cws-publish.sh --status    read-only check that sign-in works; changes nothing
+#   scripts/cws-publish.sh --cancel    withdraws the version in review, so a newer one can be submitted
 #
 # Needs these in the environment:
 #   CWS_PUBLISHER_ID   Developer Dashboard, Account, Publisher ID
@@ -13,7 +14,7 @@
 #   CWS_PUBLISH_TYPE   optional: DEFAULT_PUBLISH (live after review, the default) or
 #                      STAGED_PUBLISH (waits for you to press Publish after review)
 set -euo pipefail
-zip=${1:?usage: cws-publish.sh <zip> | --status}
+zip=${1:?usage: cws-publish.sh <zip> | --status | --cancel}
 : "${CWS_PUBLISHER_ID:?}" "${CWS_ITEM_ID:?}" "${CWS_TOKEN:?}"
 case "$zip" in *-stage.zip) echo "Refusing to publish a stage build: $zip" >&2; exit 1 ;; esac
 
@@ -21,6 +22,12 @@ api=https://chromewebstore.googleapis.com
 item=publishers/$CWS_PUBLISHER_ID/items/$CWS_ITEM_ID
 auth=(-H "Authorization: Bearer $CWS_TOKEN")
 field() { python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('$1') or '')"; }
+
+if [ "$zip" = --cancel ]; then
+  curl -sS --fail-with-body "${auth[@]}" -X POST "$api/v2/$item:cancelSubmission"
+  echo
+  zip=--status
+fi
 
 if [ "$zip" = --status ]; then
   curl -sS --fail-with-body "${auth[@]}" "$api/v2/$item:fetchStatus"
