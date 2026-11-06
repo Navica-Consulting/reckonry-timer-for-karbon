@@ -1,10 +1,10 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.39 (with 0.7.38's install connection and the client work list) passed Max's live test and is tagged `v0.7.39`. It was the first automated store submission: the Release workflow uploaded it and it is pending review (2026-11-06).
+Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.39 (with 0.7.38's install connection and the client work list) passed Max's live test and was the first automated store submission. Its review was then canceled for 0.7.40, which renames the extension "(beta)" and is pending review (2026-11-06), tagged `v0.7.40`.
 
 ## Next step
-0.7.40 renames the extension "Reckonry Timer for Karbon (beta)" (was "(beta draft)"). It is committed and built, not tagged, because 0.7.39 is still in review and the store takes no new version until then. Once 0.7.39 clears, or if Max cancels its review in the dashboard, tag `v0.7.40` and the Release workflow submits it. With `DEFAULT_PUBLISH` an approved version goes live on its own, still unlisted.
+Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), still unlisted, named "Reckonry Timer for Karbon (beta)". Check with the Release workflow's `status` action or the store dashboard. A version tag submits to the store automatically, so tag only versions Max has tested.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
@@ -51,7 +51,7 @@ Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded
 
 ## Session log
 ### 2026-11-06, name change (Claude Code)
-- Max asked to rename to "(beta)". Built as 0.7.40 and committed. Not tagged: 0.7.39 is still pending review.
+- Max asked to rename to "(beta)". Built as 0.7.40. Google allows one version in review at a time, and Max's local gcloud login had expired, so the Release workflow got a `cancel` action (`cancelSubmission` in `scripts/cws-publish.sh`), run through the service account in Actions. 0.7.39's review showed `CANCELLED`; tagged `v0.7.40`, which uploaded and is `PENDING_REVIEW`.
 
 ### 2026-11-06, first automated store release (Claude Code)
 - Max tested 0.7.38 and 0.7.39 live and asked to try the automated store deployment, since no permissions changed (manifest permissions and host access match 0.7.37).

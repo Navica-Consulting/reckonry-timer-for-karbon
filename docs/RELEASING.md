@@ -25,8 +25,9 @@ Developer Dashboard: https://chrome.google.com/webstore/devconsole
    workflow publishes `docs/privacy-policy.md` to https://timer.reckonry.ai/privacy, and the
    landing page in `site/` to https://timer.reckonry.ai, from the same tag. Check both runs under Actions on GitHub.
 
-A new version can't be submitted while another is still in review, so wait for approval before
-tagging. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub
+A new version can't be submitted while another is still in review. Wait for approval before
+tagging, or withdraw the one in review: Actions, Release, Run workflow, action `cancel` (tested
+2026-11-06). Then tag the new version. To upload by hand instead, use `reckonry-timer-for-karbon-<version>.zip` from the GitHub
 release or `dist/`, never the `-stage` zip.
 
 ## Before the first public release
