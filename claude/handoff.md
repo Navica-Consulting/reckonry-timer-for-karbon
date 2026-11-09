@@ -50,6 +50,12 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-09, create work item, test branch (Claude Code)
+- Max asked for a way to create a work item from the Work search when it isn't found. Built on branch `test/create-work-item` as 0.7.41. Not merged, not tagged.
+- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Three test items (Reach Foundation and Abigail Silvers) were created and then deleted.
+- Every Work list now ends with "+ Create work item". It opens a small form: title (from the search), client (prefilled from Client), and template. The item starts today, is assigned to you, and is picked as if found. Client groups are refused, since work belongs to a person or organization.
+- Tested in the browser pane with stubbed Chrome APIs. Not yet loaded as a real extension. Privacy review is in `docs/PRIVACY.md`, with an open item on the policy wording before release.
+
 ### 2026-11-06, name change (Claude Code)
 - Max asked to rename to "(beta)". Built as 0.7.40. Google allows one version in review at a time, and Max's local gcloud login had expired, so the Release workflow got a `cancel` action (`cancelSubmission` in `scripts/cws-publish.sh`), run through the service account in Actions. 0.7.39's review showed `CANCELLED`; tagged `v0.7.40`, which uploaded and is `PENDING_REVIEW`.
 

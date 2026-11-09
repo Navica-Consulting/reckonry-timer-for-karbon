@@ -148,6 +148,14 @@ dates, status) is shown in the list and kept in the page's memory for a minute, 
 search with no client now includes completed work. Same destination and the same kind of data as
 search. No new permissions, host access, or storage keys. No inventory change.
 
+Create work item review (2026-11-09, 0.7.41, test branch): the Work field can now create a work
+item in Karbon when search doesn't find it. It reads the firm's work templates with
+`GET /work/api/{tenant}/workTemplateSummaries` and creates the item with
+`POST /work/api/{tenant}/workItems`, the calls Karbon's own Add Work form makes, on the same
+regional API host. The title, client, and template you choose go to Karbon only. Nothing is stored;
+the template list is held only while the form is open. No new permissions, host access, or storage
+keys. No inventory change. Before release, see the open item below.
+
 ## Hosting setup (done 2026-10-24)
 
 GitHub Pages is on for this repository, public, built by Actions, with the custom domain
@@ -157,7 +165,12 @@ from `main` and from `v*` tags. The store listing's privacy policy URL points to
 
 ## Open items
 
-None. The 2026-11-06 policy names the firm name, Chrome Sync of settings and presets, and
+- Creating work items (0.7.41, test branch): the policy says "Timer actions and notes are sent
+  only to Karbon's servers", and the store's single purpose is about the timer. If this feature
+  ships, add "work items you create" to that sentence, bump the effective date, and check that the
+  single purpose still covers it (waiting on: Max).
+
+Otherwise none. The 2026-11-06 policy names the firm name, Chrome Sync of settings and presets, and
 Karbon's servers. The store's Privacy practices tab, with the `cookies` and `*.karbonhq.com`
 justifications, was filled in for 0.7.37.
 
