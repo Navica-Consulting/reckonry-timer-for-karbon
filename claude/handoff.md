@@ -52,8 +52,8 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 ## Session log
 ### 2026-11-09, create work item, test branch (Claude Code)
 - Max asked for a way to create a work item from the Work search when it isn't found. Built on branch `test/create-work-item` as 0.7.41. Not merged, not tagged.
-- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Three test items (Reach Foundation and Abigail Silvers) were created and then deleted.
-- Every Work list now ends with "+ Create work item". It opens a small form: title (from the search), client (prefilled from Client), and template. The item starts today, is assigned to you, and is picked as if found. Client groups are refused, since work belongs to a person or organization.
+- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Four test items (Reach Foundation, Abigail Silvers, and Silvers Client Group) were created and then deleted.
+- Every Work list now ends with "+ Create work item". It opens a small form: title (from the search), client (prefilled from Client), and template. The item starts today, is assigned to you, and is picked as if found. Client groups work too (`clientType: "ClientGroup"`), since work can belong to a group (Max).
 - Tested in the browser pane with stubbed Chrome APIs. Not yet loaded as a real extension. Privacy review is in `docs/PRIVACY.md`, with an open item on the policy wording before release.
 
 ### 2026-11-06, name change (Claude Code)

@@ -382,12 +382,12 @@ function KTKarbon(env) {
   }
 
   // Starts today, assigned to you. A template's roles are left for later, like Karbon's "Do this later".
-  // Work belongs to a person or an organization; Karbon's form has no client group option for it.
-  const CLIENT_TYPES = { Contact: 'Contact', Organization: 'Organization' };
+  // The client can be a person, an organization, or a client group (sent as clientType "ClientGroup").
+  const CLIENT_TYPES = { Contact: 'Contact', Organization: 'Organization', ClientGroup: 'ClientGroup' };
   async function createWork({ title, clientKey, clientLinkType, templateKey = null }) {
     const name = String(title || '').trim();
     if (!name) throw new Error('Give the work item a title.');
-    if (!clientKey || !CLIENT_TYPES[clientLinkType]) throw new Error('Choose a person or organization as the client.');
+    if (!clientKey || !CLIENT_TYPES[clientLinkType]) throw new Error('Choose the client this work is for.');
     const workItem = {
       name, description: '', startDate: localDate(), dueDate: null,
       sourceWorkTemplatePermaKey: templateKey || null,

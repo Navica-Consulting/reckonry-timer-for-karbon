@@ -127,5 +127,6 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
 - A minimal body works, from the page with the session cookie. Tested 2026-11-09 with and without a template, for an organization and a person:
   `{ workItem: { name, description: "", startDate: "YYYY-MM-DD", dueDate: null, sourceWorkTemplatePermaKey: <key or null>, clientPermaKey, clientType: "Organization" | "Contact", assignedTo: <user>, assignedByPermaKey: <user>, actorUserProfileMapping: [], privacyLevel: "public", type: "work-item" } }`.
 - Deleting a work item is a soft delete: `PUT /work/api/{tenant}/workItems/{key}` with the full work item and `status: "Deleted"`. All three test items were deleted this way.
-- Not tested: a client group as the work's client, work types, due dates, and firms that require role assignment.
+- A client group can own work. Karbon's form sends the group's key as `clientPermaKey` with `clientType: "ClientGroup"` (captured 2026-11-09; the test item was deleted). The response also fills `clientGroupPermaKey` and `clientGroupFullName` with the group.
+- Not tested: work types, due dates, and firms that require role assignment.
 - Used by the extension since 0.7.41 (`workTemplates` and `createWork` in `src/karbon.js`).

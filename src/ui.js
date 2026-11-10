@@ -279,9 +279,8 @@ function newWorkForm(host, o) {
     err.hidden = false;
   };
   const client = pickField(clientHost, { id: `${o.id}New`, label: 'Client', kind: 'contact', onError: fail, onPick: () => tmpl.focus() });
-  // Starts with the client already chosen above, when it can own work.
-  const owner = (c) => c && c.key && c.linkType !== 'ClientGroup';
-  keyedClient(o.client).then((c) => { if (owner(c) && !client.item) client.show(c, true); }).catch(() => {});
+  // Starts with the client already chosen above.
+  keyedClient(o.client).then((c) => { if (c && !client.item) client.show(c, true); }).catch(() => {});
 
   // Like Karbon's form, a template names the work until you type your own title.
   let auto = '';
@@ -298,7 +297,6 @@ function newWorkForm(host, o) {
     const c = client.item;
     if (!title.value.trim()) { fail({ error: 'Give the work item a title.' }); return title.focus(); }
     if (!c || !c.key) { fail({ error: 'Choose the client this work is for.' }); return client.q.focus(); }
-    if (!owner(c)) { fail({ error: 'Work belongs to a person or an organization, not a client group. Choose one of its members.' }); return client.edit(); }
     create.disabled = true;
     create.textContent = 'Creating';
     const r = await send('createWork', { title: title.value, clientKey: c.key, clientLinkType: c.linkType, templateKey: tmpl.value || null });
