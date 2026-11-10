@@ -50,6 +50,14 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-09, daily endpoint check (Claude Code)
+- Max asked for a daily check that every Karbon endpoint still works, with breaks fixed and released to the store automatically. Runbook: `docs/ENDPOINT-CHECK.md`.
+- `scripts/endpoint-check/check.js` runs the released `karbon.js` (newest `v*` tag) in a signed-in Karbon tab and checks raw response fields too. `bundle.sh` builds the paste. Test clients (Max's): Reach Foundation, Abigail Silvers, and Silvers Client Group, in the untracked `config.local.json`.
+- First live run on Max's tenant: every read and write check passed, including a minute saved to a throwaway work item, then deleted.
+- Incident: an early ad-hoc test discarded a timer that was running on Max's account. Max was told. The check now touches only a timer it started (matched by initial start time) and stops when anyone else's timer is running.
+- Scheduled task `karbon-endpoint-check` runs daily at 6:00 in Claude's built-in browser, in Auto mode. It never types Karbon passwords; when signed out, it notifies Max.
+- On branch `tools/endpoint-check` from `main`, not committed (waiting on: Max).
+
 ### 2026-11-06, name change (Claude Code)
 - Max asked to rename to "(beta)". Built as 0.7.40. Google allows one version in review at a time, and Max's local gcloud login had expired, so the Release workflow got a `cancel` action (`cancelSubmission` in `scripts/cws-publish.sh`), run through the service account in Actions. 0.7.39's review showed `CANCELLED`; tagged `v0.7.40`, which uploaded and is `PENDING_REVIEW`.
 
