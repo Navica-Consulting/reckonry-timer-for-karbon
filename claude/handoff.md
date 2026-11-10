@@ -50,6 +50,11 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-10, create work item released as 0.7.41 (Claude Code)
+- Max tested the unpacked build and asked to merge and release. A status run showed 0.7.40 `PUBLISHED`, nothing in review.
+- Policy now says work items you create go only to Karbon (effective November 10, 2026). `docs/store-privacy-tab.md` single purpose and host justification mention creating a work item; that text is pasted into the dashboard by hand (waiting on: Max).
+- Merged `test/create-work-item` into `main`, tagged `v0.7.41`, and the Release workflow submitted it for review.
+
 ### 2026-11-09, daily endpoint check (Claude Code)
 - Max asked for a daily check that every Karbon endpoint still works, with breaks fixed and released to the store automatically. Runbook: `docs/ENDPOINT-CHECK.md`.
 - `scripts/endpoint-check/check.js` runs the released `karbon.js` (newest `v*` tag) in a signed-in Karbon tab and checks raw response fields too. `bundle.sh` builds the paste. Test clients (Max's): Reach Foundation, Abigail Silvers, and Silvers Client Group, in the untracked `config.local.json`.
@@ -57,6 +62,12 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - Incident: an early ad-hoc test discarded a timer that was running on Max's account. Max was told. The check now touches only a timer it started (matched by initial start time) and stops when anyone else's timer is running.
 - Scheduled task `karbon-endpoint-check` runs daily at 6:00 in Claude's built-in browser, in Auto mode. It never types Karbon passwords; when signed out, it notifies Max.
 - On branch `tools/endpoint-check` from `main`, not committed (waiting on: Max).
+
+### 2026-11-09, create work item, test branch (Claude Code)
+- Max asked for a way to create a work item from the Work search when it isn't found. Built on branch `test/create-work-item` as 0.7.41. Not merged, not tagged.
+- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Four test items (Reach Foundation, Abigail Silvers, and Silvers Client Group) were created and then deleted.
+- Every Work list now ends with "+ Create work item". It opens a small form: title (from the search), client (prefilled from Client), and template. The item starts today, is assigned to you, and is picked as if found. Client groups work too (`clientType: "ClientGroup"`), since work can belong to a group (Max).
+- Tested in the browser pane with stubbed Chrome APIs. Not yet loaded as a real extension. Privacy review is in `docs/PRIVACY.md`, with an open item on the policy wording before release.
 
 ### 2026-11-06, name change (Claude Code)
 - Max asked to rename to "(beta)". Built as 0.7.40. Google allows one version in review at a time, and Max's local gcloud login had expired, so the Release workflow got a `cancel` action (`cancelSubmission` in `scripts/cws-publish.sh`), run through the service account in Actions. 0.7.39's review showed `CANCELLED`; tagged `v0.7.40`, which uploaded and is `PENDING_REVIEW`.

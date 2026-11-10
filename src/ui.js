@@ -100,7 +100,14 @@ function pickField(host, o) {
   host.replaceChildren(el('label', { for: ids.q, class: 'field' }, ...[].concat(o.label)), box, picker);
 
   const f = { item: null, editing: false, q, box, ids };
+  let form = null; // the new work item form, while it's open
   const fail = (r) => { $(ids.head).textContent = ''; if (o.onError) o.onError(r); };
+  // Every Work list ends with a way to create the work item you didn't find, titled from the search.
+  const createRow = () => {
+    const term = q.value.trim();
+    return el('li', {}, el('button', { type: 'button', class: 'item more', onclick: () => f.create(term) },
+      term.length >= 2 ? `+ Create work item "${term}"` : '+ Create work item'));
+  };
   // Shows the first `shown` items, with Load more for the rest.
   const rows = (head, items, shown = items.length) => {
     $(ids.head).textContent = head;
@@ -109,6 +116,7 @@ function pickField(host, o) {
       lis.push(el('li', {}, el('button', { type: 'button', class: 'item more',
         onclick: () => { rows(head, items, shown + MORE_STEP); $(ids.list).querySelectorAll('button.item')[shown]?.focus(); } }, 'Load more')));
     }
+    if (o.kind === 'work') lis.push(createRow());
     $(ids.list).replaceChildren(...lis);
   };
   // With a client set, Work lists that client's work. A client known by name only (its key not found yet)
@@ -135,6 +143,7 @@ function pickField(host, o) {
   f.show = (item, force) => {
     if (f.editing && !force) return;
     f.editing = false;
+    if (form) { form.remove(); form = null; }
     f.item = item && item.title ? item : null;
     title.textContent = f.item ? f.item.title : '';
     if (f.item && TAGS[f.item.linkType]) title.append(' ', el('span', { class: 'tag' }, TAGS[f.item.linkType]));
@@ -154,6 +163,20 @@ function pickField(host, o) {
     box.hidden = true;
     picker.hidden = false;
     q.focus();
+  };
+  // Swaps the search for the new work item form. The new item is picked as if found by search.
+  f.create = (term) => {
+    openDrop(ids, false);
+    f.editing = true;
+    box.hidden = true;
+    picker.hidden = true;
+    form = el('div', { class: 'newwork' });
+    host.append(form);
+    newWorkForm(form, {
+      id: o.id, title: term, client: scope(),
+      onDone: (item) => { cache = null; f.pick(item); },
+      onCancel: () => { const had = f.item; f.show(had, true); (had ? box : q).focus(); },
+    });
   };
   f.invalid = (on) => (on ? q.setAttribute('aria-invalid', 'true') : q.removeAttribute('aria-invalid'));
 
@@ -231,6 +254,66 @@ function pickField(host, o) {
     box.focus();
   });
   return f;
+}
+
+// ---- New work item ----
+// For work that search didn't find: a title, a client, and an optional template. It starts today and is
+// assigned to you, as Karbon's Add Work form does by default. o: { id, title, client, onDone(item), onCancel() }
+function newWorkForm(host, o) {
+  const ids = { title: `${o.id}NewTitle`, tmpl: `${o.id}NewTmpl`, err: `${o.id}NewErr` };
+  const title = el('input', { id: ids.title, type: 'text', autocomplete: 'off', 'aria-describedby': ids.err });
+  const tmpl = el('select', { id: ids.tmpl }, el('option', { value: '' }, 'No template'));
+  const err = el('p', { id: ids.err, class: 'err', role: 'alert', hidden: '' });
+  const clientHost = el('div');
+  const create = el('button', { type: 'button', class: 'btn primary' }, 'Create');
+  const cancel = el('button', { type: 'button', class: 'btn' }, 'Cancel');
+  host.replaceChildren(
+    el('p', { class: 'muted' }, 'New work item. It starts today and is assigned to you.'),
+    el('label', { for: ids.title, class: 'field' }, 'Title'), title, clientHost,
+    el('label', { for: ids.tmpl, class: 'field' }, 'Template'), tmpl, err,
+    el('div', { class: 'row end' }, cancel, create));
+  title.value = o.title || '';
+
+  const fail = (r) => {
+    err.textContent = (r && r.code === 'SIGNED_OUT' ? 'You are signed out of Karbon. Sign in, then try again.' : r && r.error) || 'Something went wrong.';
+    err.hidden = false;
+  };
+  const client = pickField(clientHost, { id: `${o.id}New`, label: 'Client', kind: 'contact', onError: fail, onPick: () => tmpl.focus() });
+  // Starts with the client already chosen above.
+  keyedClient(o.client).then((c) => { if (c && !client.item) client.show(c, true); }).catch(() => {});
+
+  // Like Karbon's form, a template names the work until you type your own title.
+  let auto = '';
+  send('workTemplates').then((r) => {
+    if (r && r.ok) tmpl.append(...r.result.map((t) => el('option', { value: t.key }, t.name)));
+  });
+  tmpl.addEventListener('change', () => {
+    if (title.value.trim() && title.value !== auto) return;
+    title.value = auto = tmpl.value ? tmpl.selectedOptions[0].textContent : '';
+  });
+
+  const submit = async () => {
+    err.hidden = true;
+    const c = client.item;
+    if (!title.value.trim()) { fail({ error: 'Give the work item a title.' }); return title.focus(); }
+    if (!c || !c.key) { fail({ error: 'Choose the client this work is for.' }); return client.q.focus(); }
+    create.disabled = true;
+    create.textContent = 'Creating';
+    const r = await send('createWork', { title: title.value, clientKey: c.key, clientLinkType: c.linkType, templateKey: tmpl.value || null });
+    create.disabled = false;
+    create.textContent = 'Create';
+    if (!r || !r.ok) return fail(r);
+    o.onDone(r.result);
+  };
+  create.addEventListener('click', submit);
+  cancel.addEventListener('click', () => o.onCancel());
+  title.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+  host.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    e.preventDefault();
+    o.onCancel();
+  });
+  title.focus();
 }
 
 // ---- Ordering work ----

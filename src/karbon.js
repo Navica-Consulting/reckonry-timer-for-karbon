@@ -368,6 +368,40 @@ function KTKarbon(env) {
     done: !!x.completedDate || x.workItemStatus === 'Completed', start: (x.startDate || '').slice(0, 10) || null,
   });
 
+  // ---- Creating a work item ----
+  // Captured 2026-11-09 from Karbon's Add Work form:
+  //   GET /work/api/{tenant}/workTemplateSummaries -> { workTemplateSummaries: [{ id, name, lastPublishedDateTime }] }
+  //   POST /work/api/{tenant}/workItems with { workItem } -> { workItem: { id, name, status, clientFullName } }
+  // Templates never published are left out, since Karbon creates work from the published version.
+  async function workTemplates() {
+    const j = await call('GET', `/work/api/${K.tenant}/workTemplateSummaries`);
+    return ((j && j.workTemplateSummaries) || [])
+      .filter((x) => x.id && x.name && x.lastPublishedDateTime)
+      .map((x) => ({ key: x.id, name: x.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Starts today, assigned to you. A template's roles are left for later, like Karbon's "Do this later".
+  // The client can be a person, an organization, or a client group (sent as clientType "ClientGroup").
+  const CLIENT_TYPES = { Contact: 'Contact', Organization: 'Organization', ClientGroup: 'ClientGroup' };
+  async function createWork({ title, clientKey, clientLinkType, templateKey = null }) {
+    const name = String(title || '').trim();
+    if (!name) throw new Error('Give the work item a title.');
+    if (!clientKey || !CLIENT_TYPES[clientLinkType]) throw new Error('Choose the client this work is for.');
+    const workItem = {
+      name, description: '', startDate: localDate(), dueDate: null,
+      sourceWorkTemplatePermaKey: templateKey || null,
+      clientPermaKey: clientKey, clientType: CLIENT_TYPES[clientLinkType],
+      assignedTo: K.user, assignedByPermaKey: K.user, actorUserProfileMapping: [],
+      privacyLevel: 'public', type: 'work-item',
+    };
+    const j = await call('POST', `/work/api/${K.tenant}/workItems`, { workItem });
+    const w = j && j.workItem;
+    if (!w || !w.id) throw new Error('Karbon did not return the new work item.');
+    const client = w.clientFullName || '';
+    return { key: w.id, linkType: 'WorkItem', title: w.name || name, subtitle: client, client, status: w.status || null };
+  }
+
   // ---- Role and task type lists, for the start panel ----
   // Captured 2026-10-23:
   //   userActorListItems -> { userActorListItems: [{ id, name, isDefault, avatarColorId }] }  ("None" has id "NONE")
@@ -425,7 +459,7 @@ function KTKarbon(env) {
 
   const COMMANDS = {
     getState, start, pause, resume, appendNote, edit, autoPause, autoResume, stopAndSave, discard,
-    search, recents, clientWork, lookups, timeSettings, prefill,
+    search, recents, clientWork, workTemplates, createWork, lookups, timeSettings, prefill,
   };
 
   // Runs one command. Timer results go out in the extension's short form.

@@ -115,3 +115,18 @@ Captured 2026-10-23 on Max's test tenant. Keys are shown as `{tenant}`, `{user}`
 - The tab also sends `POST /todo/api/{tenant}/viewFilterResultSummaries` with the same client filter and a `status` list of built-in names plus the firm's custom status keys, for the filter counts. `GET /tenant/api/{tenant}/statusLookups` and `workTypeLookups` load the filter menus.
 - Used by the extension since 0.7.39 (`clientWork` in `src/karbon.js`): with a client chosen, it fetches all of that client's work (every status, up to 400 items) and orders and filters it locally.
 - A person's work is only work where that person is the client. Karbon has no case where an organization's work shows on its people (Max, 2026-11-06).
+
+## Creating a work item (captured 2026-11-09, Max's tenant)
+- Karbon's Add Work form (Add, then Work) loads `GET /work/api/{tenant}/workTemplateSummaries` on the regional API host.
+  - Response: `{ workTemplateSummaries: [{ id, name, description, lastPublishedDateTime }] }`. Templates never published have `lastPublishedDateTime: null`.
+- Picking a template sends `GET /work/api/{tenant}/workTemplates/{id}`. It returns `workTemplate` with `name`, `workType`, `isDraft`, and `contributors` (the template's roles, `memberType: "Actor"`). The form fills the title with the template's name.
+- The Client field uses `GET /search/api/{tenant}/clientLookupItems?includeUserProfiles=true&searchTerm=…&showEmailAsSubtitle=true&skip=0&take=20`, returning `clientLookupItems[]` with `id`, `entityType` ("contact", "organization", or "client-group"), and `title`.
+- Create sends `POST /work/api/{tenant}/workItems` with `{ workItem: {...} }`, about 80 fields, mostly null. It returns 200 with `{ workItem }`, including the new `id`, `status: "ReadyToStart"`, `clientFullName`, and the template's checklist.
+  - When the template has roles, Karbon first asks who fills each one. "Do this later" sends `actorUserProfileMapping: []`.
+  - Karbon then sends `POST /tenant/api/{tenant}/recentsList` and opens the new item.
+- A minimal body works, from the page with the session cookie. Tested 2026-11-09 with and without a template, for an organization and a person:
+  `{ workItem: { name, description: "", startDate: "YYYY-MM-DD", dueDate: null, sourceWorkTemplatePermaKey: <key or null>, clientPermaKey, clientType: "Organization" | "Contact", assignedTo: <user>, assignedByPermaKey: <user>, actorUserProfileMapping: [], privacyLevel: "public", type: "work-item" } }`.
+- Deleting a work item is a soft delete: `PUT /work/api/{tenant}/workItems/{key}` with the full work item and `status: "Deleted"`. All three test items were deleted this way.
+- A client group can own work. Karbon's form sends the group's key as `clientPermaKey` with `clientType: "ClientGroup"` (captured 2026-11-09; the test item was deleted). The response also fills `clientGroupPermaKey` and `clientGroupFullName` with the group.
+- Not tested: work types, due dates, and firms that require role assignment.
+- Used by the extension since 0.7.41 (`workTemplates` and `createWork` in `src/karbon.js`).
