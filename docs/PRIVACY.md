@@ -154,7 +154,9 @@ item in Karbon when search doesn't find it. It reads the firm's work templates w
 `POST /work/api/{tenant}/workItems`, the calls Karbon's own Add Work form makes, on the same
 regional API host. The title, client, and template you choose go to Karbon only. Nothing is stored;
 the template list is held only while the form is open. No new permissions, host access, or storage
-keys. No inventory change. Before release, see the open item below.
+keys. No inventory change. For release (2026-11-10), the policy now says work items you create go
+only to Karbon, with a new effective date, and the store's single purpose and host justification
+mention creating a work item to time against.
 
 ## Hosting setup (done 2026-10-24)
 
@@ -165,12 +167,7 @@ from `main` and from `v*` tags. The store listing's privacy policy URL points to
 
 ## Open items
 
-- Creating work items (0.7.41, test branch): the policy says "Timer actions and notes are sent
-  only to Karbon's servers", and the store's single purpose is about the timer. If this feature
-  ships, add "work items you create" to that sentence, bump the effective date, and check that the
-  single purpose still covers it (waiting on: Max).
-
-Otherwise none. The 2026-11-06 policy names the firm name, Chrome Sync of settings and presets, and
+None. The 2026-11-10 policy names the firm name, Chrome Sync of settings and presets, and
 Karbon's servers. The store's Privacy practices tab, with the `cookies` and `*.karbonhq.com`
 justifications, was filled in for 0.7.37.
 

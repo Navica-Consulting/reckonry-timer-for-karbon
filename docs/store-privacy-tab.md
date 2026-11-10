@@ -8,7 +8,9 @@ characters.
 
 Reckonry Timer for Karbon adds a faster timer to Karbon, the practice management app. It starts,
 switches, pauses, and stops Karbon's own time tracking from the toolbar and from Karbon's pages,
-and it reminds you when a timer should be running or has been left on.
+and it reminds you when a timer should be running or has been left on. When the work you
+want to time isn't in Karbon yet, it can create that work item so the timer has something to
+record against.
 
 ## Permission justifications
 
@@ -52,7 +54,7 @@ pages and learns the timer's state from them.
 `https://*.karbonhq.com/*` covers Karbon's regional API servers (for example us3.karbonhq.com).
 Karbon stores each firm's data in one region and names it in the cookie above, so the exact host
 isn't known in advance. The extension calls only Karbon's time tracking, work, and search
-services there, as the signed-in user, to start, stop, and look up their own timers. It sends no
+services there, as the signed-in user, to start, stop, and look up their own timers, and to create a work item to time against. It sends no
 data to any server other than Karbon.
 
 ## Remote code

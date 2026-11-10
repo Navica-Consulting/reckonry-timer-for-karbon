@@ -4,7 +4,7 @@
 
 # Privacy Policy for Reckonry Timer for Karbon
 
-Effective date: November 6, 2026
+Effective date: November 10, 2026
 
 Reckonry Timer for Karbon ("the extension") is published by Navica LLC. This policy explains what the extension handles and what it does not.
 
@@ -23,7 +23,7 @@ The extension also observes the Karbon web app's own requests to learn your time
 
 ## Where your information goes
 
-Everything above is stored only in your browser, using Chrome's extension storage. The one exception is your settings and presets: if you have Chrome Sync turned on, Chrome copies them to your other computers through your Google account. Timer actions and notes are sent only to Karbon's servers (karbonhq.com), using your existing Karbon sign-in, so Karbon can record your time.
+Everything above is stored only in your browser, using Chrome's extension storage. The one exception is your settings and presets: if you have Chrome Sync turned on, Chrome copies them to your other computers through your Google account. Timer actions, notes, and work items you create are sent only to Karbon's servers (karbonhq.com), using your existing Karbon sign-in, so Karbon can record your time and your work.
 
 The extension does not send your information to Navica LLC or to anyone else. It has no analytics, tracking, or advertising, and it does not sell or share your data.
 

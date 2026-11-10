@@ -50,6 +50,11 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-10, create work item released as 0.7.41 (Claude Code)
+- Max tested the unpacked build and asked to merge and release. A status run showed 0.7.40 `PUBLISHED`, nothing in review.
+- Policy now says work items you create go only to Karbon (effective November 10, 2026). `docs/store-privacy-tab.md` single purpose and host justification mention creating a work item; that text is pasted into the dashboard by hand (waiting on: Max).
+- Merged `test/create-work-item` into `main`, tagged `v0.7.41`, and the Release workflow submitted it for review.
+
 ### 2026-11-09, create work item, test branch (Claude Code)
 - Max asked for a way to create a work item from the Work search when it isn't found. Built on branch `test/create-work-item` as 0.7.41. Not merged, not tagged.
 - Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Four test items (Reach Foundation, Abigail Silvers, and Silvers Client Group) were created and then deleted.
