@@ -109,6 +109,10 @@ async function KTCheck(KTKarbon, opts = {}) {
     return wsSend.apply(this, arguments);
   };
 
+  // Firm settings and lists, read below and used again by saveCycle.
+  let cfg = null;
+  let lists = { roles: [], taskTypes: [] };
+
   try {
     // ---- Sign-in and keys ----
     const ses = session();
@@ -145,14 +149,12 @@ async function KTCheck(KTKarbon, opts = {}) {
       need(['Stopped', 'Started', 'Paused'].includes(state.state), `unknown stopwatchState ${state.state}`);
       return state.state;
     });
-    let cfg = null;
     await check('timeSettings', 'Firm rules: work-only time, required role, task type, and notes, prefill mode', 'karbon.js timeSettings', async () => {
       cfg = await run('timeSettings', { fresh: true });
       const s = last(/timeTenantSettings/);
       fields(s && (s.timeTenantSettings || s.timeTenantSetting), ['timeTrackingEntity', 'isNotesRequired', 'isActorRequired', 'isTaskTypeRequired', 'timeEntryPrefillMode'], 'timeTenantSettings');
       return `${cfg.entity}, prefill ${cfg.prefillMode}`;
     });
-    let lists = { roles: [], taskTypes: [] };
     await check('lookups', 'Role and task type lists', 'karbon.js lookups', async () => {
       lists = await run('lookups');
       list(last(/userActorListItems/), 'userActorListItems', ['id', 'name', 'isDefault'], 'roles');
