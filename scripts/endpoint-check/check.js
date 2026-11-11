@@ -264,17 +264,21 @@ async function KTCheck(KTKarbon, opts = {}) {
     }
     let work = null; let entryId = null;
     try {
-      await check('work.create', 'Creating a work item (fixture for the save check)', 'karbon.js createWork', async () => {
-        const today = new Date().toLocaleDateString('en-CA');
-        const j = await rawCall('POST', `/work/api/${K.tenant}/workItems`, { workItem: {
-          name: 'Reckonry endpoint check (safe to delete)', description: '', startDate: today, dueDate: null,
-          sourceWorkTemplatePermaKey: null, clientPermaKey: opts.client.key, clientType: opts.client.linkType,
-          assignedTo: K.user, assignedByPermaKey: K.user, actorUserProfileMapping: [], privacyLevel: 'public', type: 'work-item',
-        } });
-        work = j && j.workItem;
-        fields(work, ['id', 'name', 'status', 'clientFullName'], 'workItem');
+      await check('work.create', 'Create work item, and the fixture for the save check', 'karbon.js createWork', async () => {
+        work = await createTestWork(opts.client);
+        return opts.client.linkType;
       });
       if (!work) return;
+      // A client group is sent with a different clientType, so it gets its own create, then is deleted.
+      const group = (opts.clients || []).find((c) => c.linkType === 'ClientGroup');
+      if (group) {
+        let gw = null;
+        await check('work.createGroup', 'Create work item for a client group', 'karbon.js createWork', async () => {
+          if (!(await has('createWork'))) return { skip: 'not in this version' };
+          gw = await createTestWork(group);
+        });
+        if (gw) await check('cleanup.workGroup', 'Removing the client group test work item', 'scripts/endpoint-check', () => deleteWork(gw));
+      }
       const pick = (l, req) => (req ? (l.find((x) => x.key !== 'NONE' && !x.isDefault) || l[0] || {}).key : null);
       await check('timer.startWork', 'Starting a timer on a work item', 'karbon.js start', async () => {
         await guard();
@@ -294,9 +298,31 @@ async function KTCheck(KTKarbon, opts = {}) {
       });
     } finally {
       if (entryId) await check('cleanup.entry', 'Removing the test time entry', 'scripts/endpoint-check', () => rawCall('DELETE', `/time/api/${K.tenant}/timeEntries/${entryId}`));
-      if (work) await check('cleanup.work', 'Removing the test work item', 'scripts/endpoint-check', () => rawCall('PUT', `/work/api/${K.tenant}/workItems/${work.id}`, { workItem: { ...work, status: 'Deleted' } }));
+      if (work) await check('cleanup.work', 'Removing the test work item', 'scripts/endpoint-check', () => deleteWork(work));
     }
   }
+
+  // Creates "Reckonry endpoint check (safe to delete)" for a test client and returns Karbon's full
+  // workItem, which the delete needs. Uses the extension's createWork when this version has it.
+  async function createTestWork(c) {
+    const name = 'Reckonry endpoint check (safe to delete)';
+    let r = null;
+    if (await has('createWork')) {
+      r = await run('createWork', { title: name, clientKey: c.key, clientLinkType: c.linkType });
+    } else {
+      await rawCall('POST', `/work/api/${K.tenant}/workItems`, { workItem: {
+        name, description: '', startDate: new Date().toLocaleDateString('en-CA'), dueDate: null,
+        sourceWorkTemplatePermaKey: null, clientPermaKey: c.key, clientType: c.linkType,
+        assignedTo: K.user, assignedByPermaKey: K.user, actorUserProfileMapping: [], privacyLevel: 'public', type: 'work-item',
+      } });
+      await settle();
+    }
+    const w = (last(/\/workItems$/) || {}).workItem;
+    fields(w, ['id', 'name', 'status', 'clientFullName'], 'workItem');
+    need(!r || r.key === w.id, 'createWork returned a different key than Karbon');
+    return w;
+  }
+  function deleteWork(w) { return rawCall('PUT', `/work/api/${K.tenant}/workItems/${w.id}`, { workItem: { ...w, status: 'Deleted' } }); }
 
   const failed = checks.filter((c) => c.status === 'fail');
   const ses = session();

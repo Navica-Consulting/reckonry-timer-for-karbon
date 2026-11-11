@@ -13,14 +13,15 @@ the code that uses it.
 - Sign-in and keys: Karbon's Ember session service (`page.js`), the `bootstrap-cookie-*`
   cookie (`background.js`), and `userEnvironmentSettings` (the background's signed-in check).
 - Reads, through the extension's own commands: the stopwatch, firm time settings, roles and
-  task types, recents, work and client search, a client's work list, budget prefill, and work
-  templates (once `createWork` ships).
+  task types, recents, work and client search, a client's work list, budget prefill, and the
+  work templates in the Create work item form.
 - The SignalR hub socket, which page.js uses for live timer updates.
 - Writes, only when no timer is running: a blank timer is started, noted, paused, resumed,
   and discarded. Nothing is saved. The hub must send `StopwatchChanged` meanwhile.
 - With a test client set, also a saved minute: it creates a work item named "Reckonry
-  endpoint check (safe to delete)", times it, saves the entry, reads it back, then deletes the
-  entry and the work item.
+  endpoint check (safe to delete)" through the extension's own `createWork`, times it, saves the
+  entry, reads it back, then deletes the entry and the work item. If `clients` has a client group,
+  it also creates one for the group (a different `clientType`) and deletes it right away.
 
 Write safety: every write step first checks that the running timer is the one the check started
 (same initial start time). If anyone starts a timer meanwhile, the check stops and leaves it
@@ -81,8 +82,7 @@ passwords. Max signs in once in the built-in browser, which keeps the session.
    - If another version is in review, cancel it first (Release workflow, action `cancel`).
      The fix is built on `main`, so it includes that version's changes.
    - Check the Release run with `gh run list --workflow release.yml`.
-9. Tell Max what broke, what changed, and the version. Other branches (for example
-   `test/create-work-item`) need `main` merged in.
+9. Tell Max what broke, what changed, and the version. Other branches need `main` merged in.
 
 ## History
 
