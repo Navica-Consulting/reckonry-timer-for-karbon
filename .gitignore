@@ -22,6 +22,7 @@
 .claude/settings.local.json
 /store/screenshots/.work/
 
-# Endpoint check: local test client and generated bundle
+# Endpoint check: local test client, generated bundle, and Playwright install
 /scripts/endpoint-check/out/
 /scripts/endpoint-check/config.local.json
+/scripts/endpoint-check/node_modules/

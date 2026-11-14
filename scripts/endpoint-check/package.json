@@ -1,0 +1,15 @@
+{
+  "name": "reckonry-endpoint-check",
+  "private": true,
+  "type": "module",
+  "description": "Daily check of the Karbon endpoints the extension uses. Not part of the extension build.",
+  "scripts": {
+    "login": "node run.mjs --login",
+    "check": "node run.mjs",
+    "check:read": "node run.mjs --read --no-alert",
+    "timer:install": "./systemd/install.sh"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}
