@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "No PR CI and the store build ships from version tags, so every update waits for a human merge. Majors get the Claude upgrade job first.",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "enabledManagers": ["npm", "github-actions"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "prConcurrentLimit": 3,
+  "automerge": false,
+  "schedule": ["* 0-6 * * 1"],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"]
+  },
+  "packageRules": [
+    {
+      "description": "Batch the low-risk updates into one weekly PR",
+      "matchUpdateTypes": ["patch", "minor", "digest"],
+      "matchCurrentVersion": "!/^0\\./",
+      "groupName": "non-major updates"
+    },
+    {
+      "description": "0.x minors are breaking under semver: treat as major",
+      "matchUpdateTypes": ["minor"],
+      "matchCurrentVersion": "/^0\\./",
+      "labels": ["major-upgrade"]
+    },
+    {
+      "description": "Majors: Claude applies the migration, human merges",
+      "matchUpdateTypes": ["major"],
+      "labels": ["major-upgrade"]
+    }
+  ]
+}
