@@ -1,5 +1,6 @@
 #!/bin/bash
-# Renders the Chrome Web Store screenshots (1280x800) and promo tiles (440x280, 1400x560) to store/screenshots/out/.
+# Renders the Chrome Web Store screenshots (1280x800), promo tiles (440x280, 1400x560), and the Loft cover
+# (1680x600) to store/screenshots/out/.
 # Copies src/ to a work folder with stub.js loaded first, serves it locally, and shoots each page with headless Chrome.
 # Works on macOS (Chrome.app, sips) and Linux (Flatpak or packaged Chrome, Python with Pillow).
 set -euo pipefail
@@ -53,12 +54,12 @@ im.save(sys.argv[2], optimize=True)' "$@"
 }
 
 mkdir -p "$here/out"
-shoot() { # page, output name, color scheme (1 light, 0 dark), width, height
-  local png="$tmp/$2.png" w="${4:-1280}" h="${5:-800}"
+shoot() { # page, output name, color scheme (1 light, 0 dark), width, height, output scale (default 1)
+  local png="$tmp/$2.png" w="${4:-1280}" h="${5:-800}" k="${6:-1}"
   "${chrome[@]}" --headless=new --disable-gpu --hide-scrollbars --no-first-run --no-default-browser-check \
     --user-data-dir="$tmp/profile-$2" --window-size=$w,$h --force-device-scale-factor=2 \
     --virtual-time-budget=6000 --blink-settings=preferredColorScheme=${3:-1} --screenshot="$png" "http://127.0.0.1:$port/shots/$1" >/dev/null 2>&1
-  flatten "$png" "$here/out/$2.png" "$w" "$h"
+  flatten "$png" "$here/out/$2.png" "$((w * k))" "$((h * k))"
   echo "out/$2.png"
 }
 shoot shot1-timer.html 1-timer
@@ -69,3 +70,4 @@ shoot shot5-away.html 5-away
 shoot shot1-timer.html 1-timer-dark 0
 shoot small.html small 1 440 280
 shoot marquee.html marquee 1 1400 560
+shoot loft-cover.html loft-cover 1 840 300 2

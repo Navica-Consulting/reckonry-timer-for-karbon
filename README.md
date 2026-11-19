@@ -1,6 +1,13 @@
-# Reckonry Timer for Karbon
+# Reckonry Timer for Karbon (archived)
 
-A Chrome extension (Manifest V3) that adds stopwatch tools to the Karbon timer: start from anywhere, auto-switch, reminders, and lock or idle pause. Published by Navica LLC.
+> [!CAUTION]
+> **Do not install or use this extension.** Karbon has told us in writing that it does not approve of this extension, because it relies on Karbon's internal web endpoints and session cookies rather than its public API. That puts it outside Karbon's [Terms of Use](https://karbonhq.com/terms/) and [Acceptable Use Policy](https://karbonhq.com/acceptable-use-policy/). Using it could get your firm's Karbon account suspended or terminated.
+>
+> The project is **discontinued and archived**. It has been removed from the Chrome Web Store, gets no updates, and accepts no issues or pull requests. The source is published only so people can read it and learn from it (Manifest V3 service worker, content scripts, a toolbar panel, idle and lock detection, and a settings page). Navica LLC is not affiliated with or endorsed by Karbon. "Karbon" is Karbon's trademark.
+>
+> Want this in Karbon itself? Vote for the feature idea in the [Loft](https://theloft.bykarbon.com/c/feature-request/timer-that-follows-your-work-auto-switch-on-work-and-pause-when-you-re-away).
+
+A Chrome extension (Manifest V3) that added stopwatch tools to the Karbon timer: start from anywhere, auto-switch, reminders, and lock or idle pause. Built by Navica LLC in October and November 2026 and mothballed on 2026-11-19. The rest of this README describes how it worked.
 
 ## Layout
 
@@ -38,6 +45,10 @@ To preview `site/` locally:
 python3 -m http.server 8796 --directory site
 ```
 
-## Releasing
+## Releasing (retired)
 
-See [docs/RELEASING.md](docs/RELEASING.md). Any change to permissions, host access, or what data the extension reads or stores also needs the privacy review in [docs/PRIVACY.md](docs/PRIVACY.md).
+The Release workflow is disabled and store auto-publish is off. For history only, see [docs/RELEASING.md](docs/RELEASING.md). Any change to permissions, host access, or what data the extension reads or stores also needs the privacy review in [docs/PRIVACY.md](docs/PRIVACY.md).
+
+## License
+
+MIT, see [LICENSE](LICENSE). The license covers this code only. It grants no rights to use Karbon's services, name, or marks.

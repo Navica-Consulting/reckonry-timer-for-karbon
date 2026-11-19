@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loft cover</title>
+<link rel="stylesheet" href="shots.css">
+<style>
+  /* 840x300 cover for the Loft feature idea (Circle's 14:5), rendered at 2x to 1680x600.
+     A screen only, no text overlay: the panel running, and the page card switching work. */
+  html, body { width:840px; height:300px; }
+  .browser { left:36px; right:36px; width:auto; top:16px; height:400px; }
+  .popup { top:6px; right:14px; }
+  .cardhost { transform-origin:top left; }
+</style>
+</head>
+<body>
+<div class="browser" data-tab="2026 tax return" data-url="app2.karbonhq.com/work/2026-tax-return" data-badge="42m" data-open="1" data-title="2026 tax return" data-client="Northwind Bakery">
+  <div class="popup scale" style="--s:.82"><iframe src="../src/popup.html?shot=1" title="Toolbar panel"></iframe></div>
+  <div class="cardhost scale" id="card" style="left:178px; top:74px; --s:.8"></div>
+</div>
+<script src="frame.js"></script>
+<script>pageCard(document.getElementById('card'), { pill: 'Switching', text: 'Switching timer to this work item in 4s.', button: 'Cancel', left: 0.78 });</script>
+</body>
+</html>

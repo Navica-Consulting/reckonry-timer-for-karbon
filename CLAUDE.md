@@ -2,9 +2,11 @@
 
 Chrome MV3 extension for Karbon's timer, published by Navica LLC.
 
+**MOTHBALLED 2026-11-19. Do no new work here.** Karbon said in writing that it does not approve the extension (internal endpoints and session cookies), which puts it outside its Terms of Use. The Chrome Web Store listing is unpublished, the Release and dependency upgrade workflows are disabled, `CWS_AUTO_PUBLISH` is `false`, and the endpoint check is off. The GitHub repo is public under MIT and archived (read-only), with a do-not-use warning at the top of `README.md`. To change anything, first run `gh repo unarchive Navica-Consulting/reckonry-timer-for-karbon`, and keep the warning. The rest of this file describes how the project worked.
+
 Project context lives in `claude/`: read `claude/CLAUDE.md` and `claude/handoff.md` first.
-Settled decisions are in `claude/context/`, and Karbon's endpoints are in
-`artifacts/capture-summary.md`. Writing style: no em dashes, Oxford comma, short plain sentences.
+Settled decisions are in `claude/context/`. The map of Karbon's internal endpoints
+(`artifacts/capture-summary.md`) was removed when the repo went public. Writing style: no em dashes, Oxford comma, short plain sentences.
 
 - Edit only `src/`. `./build.sh` writes `unpacked/production` (app2.karbonhq.com),
   `unpacked/stage` (webapp-stage.karbonhq.com), and zips in `dist/`. Never hand-edit the build
