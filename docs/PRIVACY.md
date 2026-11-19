@@ -1,5 +1,7 @@
 # Privacy policy tracking
 
+> Retired 2026-11-19. The extension is unpublished. The policy page stays online for people who installed an earlier version.
+
 The public policy lives at https://timer.reckonry.ai/privacy and is linked from
 `src/popup.html` and `src/welcome.html`. Versions before 0.7.29 link to the old Google Site,
 https://sites.google.com/navicaconsulting.com/reckonry-timer-privacy-policy/home, so keep that

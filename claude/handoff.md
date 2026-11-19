@@ -1,32 +1,27 @@
 # Handoff: Karbon Timer Tools
 
 ## Status
-Live. 0.7.37 cleared Chrome Web Store review and is live, unlisted. Max uploaded it by hand and pasted `docs/store-privacy-tab.md` into the Privacy practices tab. It is tagged `v0.7.37` (2026-11-06). Max tested 0.7.37 on the live tenant: tab-free search, adding and editing timers, role and task type prefill, presets, and required-field outlines all work. The landing page at https://timer.reckonry.ai went live on 2026-11-06 (`site/`), and the privacy policy at https://timer.reckonry.ai/privacy is effective 2026-11-06. 0.7.39 (with 0.7.38's install connection and the client work list) passed Max's live test and was the first automated store submission. Its review was then canceled for 0.7.40, which renames the extension "(beta)" and is pending review (2026-11-06), tagged `v0.7.40`.
+Mothballed on 2026-11-19. On 2026-11-18 Karbon replied in writing that the extension relies on internal APIs and session cookies, that Karbon can't approve it or let it stay live, and that it doesn't allow use of its name and screenshots. Max unpublished the store listing. The Release and dependency upgrade workflows are disabled, `CWS_AUTO_PUBLISH` is `false`, Renovate is removed, and the endpoint check (systemd timer and Claude scheduled task) is off. The repo is public under MIT and archived, with a do-not-use warning in `README.md`. timer.reckonry.ai stays up as a proof of concept that points to the Loft feature idea (`docs/loft-feature-idea.md`, posted at https://theloft.bykarbon.com/c/feature-request/timer-that-follows-your-work-auto-switch-on-work-and-pause-when-you-re-away).
 
 ## Next step
-Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), still unlisted, named "Reckonry Timer for Karbon (beta)". Check with the Release workflow's `status` action or the store dashboard. A version tag submits to the store automatically, so tag only versions Max has tested.
+None. Do no new work here unless Karbon approves a supported path, such as a time entry write API or a Partner Agreement. Unarchive the repo first.
 
 ## Builds and releases
 - One source: `src/`. Never edit the unpacked folders by hand.
 - `build.sh` rebuilds `unpacked/production` (app2.karbonhq.com, the production candidate) and `unpacked/stage` (webapp-stage.karbonhq.com, never published) in place, so Chrome only needs Reload. It also writes versioned zips to `dist/`. Git ignores both.
 - The stage build is the same extension pointed at Karbon's own stage environment. It is not a pre-release of the extension.
 - Load unpacked takes `unpacked/production`, never `dist/` (zips only, no manifest). After a rebuild, click Reload on the extension, then refresh open Karbon tabs so they get the new content scripts.
-- Two checkouts: Max's Karbon Mac (`Documents/Projects/Reckonry Timer for Karbon`, synced to OneDrive) and his Linux machine (`~/Documents/Dev Projects/reckonry-timer-for-karbon`, cloned 2026-11-05). GitHub is the only way to move code between them. The OneDrive connector can't read `.js` files. Pull before starting work on either machine.
 - `build.sh` overwrites files and never removes them. A file dropped from `src/` must be removed from the unpacked folders by hand.
 - Git: GitHub repo Navica-Consulting/reckonry-timer-for-karbon, branch `main`. Every version is tagged `v<version>`.
 - Releasing: bump the version, commit, and push a tag. The Release workflow builds, creates a GitHub release, uploads the store zip, and submits it for review (`CWS_AUTO_PUBLISH` is `true` since 2026-11-06). It signs in through Workload Identity Federation in Google Cloud project `reckonry-timer-for-karbon`, with no key and no cost. Details, IDs, and a read-only test are in `docs/RELEASING.md`.
 
 ## Open threads
-- Landing page copy: timer.reckonry.ai says "it's free" in the button and FAQ, though the monetization model isn't decided. Real customer stories would replace the typical scenarios in Use cases (waiting on: Max).
+- Other browsers: test in Microsoft Edge and Brave (Chromium works). Until then, launch posts and the listing name Chrome only (waiting on: Max).
 - Help copy: the settings page's help text and FAQ answers (in `src/welcome.html`) were drafted by Claude in 0.7.14 and never reviewed word for word. Worth a read before listing publicly (waiting on: Max, low priority).
 - Time entry rules (internal vs. client roles and task types, and a confirm step for time logged straight to a contact): planned on 2026-11-05 in `artifacts/time-entry-rules-plan.md`, then parked by Max as high effort for moderate gain (waiting on: Max, if it comes back).
 - Signed out of Karbon: 0.7.19 hides the timer when signed out and offers a Sign in button. It treats a 401, or Karbon's sign-in page where data should be, as signed out; what Karbon really returns when signed out wasn't captured (waiting on: a live sign-out test).
 - Multiple tenants: the bootstrap cookie names the user's default tenant, and a Karbon tab's URL wins for that tab. Not tested with a user in several tenants. Not critical now, since most firms don't work that way, but needed before a Karbon-wide release (waiting on: a multi-tenant user).
 - Blank start payload: the extension sends `entityPermaKey: null` and `entityLinkType: null`. Not yet compared with Karbon's own blank start (waiting on: live test).
-- Trademark and listing name: Karbon's brand guide (`~/Documents/Dev Projects/Brand Guides/Karbon/.../karbon-logo-guidance.pdf`, 2025) covers only the logo and monogram. The extension uses neither: its icon is a stopwatch, and the listing says it is independent and not endorsed by Karbon. The guide says nothing about naming a product "for Karbon". For certainty, ask Ian Clazie, Karbon's design director, named in the guide as the contact (waiting on: Max, optional).
-- Monetization model: not decided. Claude suggested launching free as a lead source for Navica, Reckonry, and Liminos, with a possible paid firm-admin tier later (waiting on: Max).
-- Sign-in: not decided. Claude suggested guest-first with optional Google or Microsoft sign-in only when a server-backed feature needs it (waiting on: Max).
-- Value exchange design: Claude drafted a ladder (local value report before the week-one feedback ask, a playbook offer with the newsletter invite, separate update and newsletter opt-ins). Max ruled out a breakage-alert list and marketing use of feedback emails on 2026-10-24 (waiting on: Max).
 
 ### Closed on 2026-11-06
 - Install connection (0.7.38) and the client work list in the Work field (0.7.39): Max tested both live; they work.
@@ -35,12 +30,10 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - Feedback form: open to anyone, typo fixed (checked 2026-11-06). The Mac checkout's `.claude/launch.json` may still have a `feedback-preview` entry; it's ignored by git, so it's harmless.
 - Tested live by Max: tab-free search, adding and editing a running timer, prefill, required "None" values (red outlines), the reminder (it works; the earlier report was a testing slip), toolbar icon color, settings page, setup probe, and toast dismiss.
 - Notes visibility: notes can reach invoices, and billers can edit them during billing. This is why notes never name other work items or clients.
-- Contractor terms: Max confirmed the Karbon contractor agreement doesn't cover the public extension.
 
 ## Decisions
 - Timer behavior and Preferences decisions are in `context/timer-behavior.md`.
 - Capture session decisions are in `context/capture-session.md`.
-- Growth and permission marketing decisions are in `context/growth.md`.
 - 2026-10-23: Remove "Start your first timer" from setup entirely (Max).
 - 2026-10-23: Keep one source (`src/`) and generate both unpacked builds from it (Max).
 - 2026-10-23: Publish to the store automatically from version tags, now that it has no Google Cloud cost (Max).
@@ -50,6 +43,13 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - 2026-11-06: Serve a landing page at timer.reckonry.ai from `site/`, deployed with the policy. Use cases are written as typical scenarios, not quotes (Max).
 
 ## Session log
+### 2026-11-19, mothball and open source (Claude Code)
+- Max confirmed with Karbon that the extension breaks its terms and pulled it from the store. He asked for a Loft feature idea, a mothball, a security check, open sourcing with a do-not-use warning, and a navica.llc tools page update.
+- Loft feature idea with a cover and screenshots: `docs/loft-feature-idea.md`; Max posted it at https://theloft.bykarbon.com/c/feature-request/timer-that-follows-your-work-auto-switch-on-work-and-pause-when-you-re-away. Cover: `store/screenshots/loft-cover.html`, rendered by `render.sh`.
+- Added the README warning, `LICENSE` (MIT), and `CHROMEWEBSTORE.md`; marked `docs/RELEASING.md`, `docs/ENDPOINT-CHECK.md`, and `docs/PRIVACY.md` retired. Removed `renovate.json` and the Claude upgrade workflow, and disabled the Release workflow.
+- The landing page's buttons now point to the Loft feature idea instead of the store, and the navica.llc tool page says Karbon blocked it (navica-marketing PR 129).
+- Security check before going public: no secrets in history. Removed from the public tip: Karbon contact names, contractor and monetization notes, `claude/context/growth.md`, test client names, and `artifacts/capture-summary.md` (the internal endpoint map). They remain in older commits.
+
 ### 2026-11-10, create work item released as 0.7.41 (Claude Code)
 - Max tested the unpacked build and asked to merge and release. A status run showed 0.7.40 `PUBLISHED`, nothing in review.
 - Policy now says work items you create go only to Karbon (effective November 10, 2026). `docs/store-privacy-tab.md` single purpose and host justification mention creating a work item; that text is pasted into the dashboard by hand (waiting on: Max).
@@ -57,7 +57,7 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 
 ### 2026-11-09, daily endpoint check (Claude Code)
 - Max asked for a daily check that every Karbon endpoint still works, with breaks fixed and released to the store automatically. Runbook: `docs/ENDPOINT-CHECK.md`.
-- `scripts/endpoint-check/check.js` runs the released `karbon.js` (newest `v*` tag) in a signed-in Karbon tab and checks raw response fields too. `bundle.sh` builds the paste. Test clients (Max's): Reach Foundation, Abigail Silvers, and Silvers Client Group, in the untracked `config.local.json`.
+- `scripts/endpoint-check/check.js` runs the released `karbon.js` (newest `v*` tag) in a signed-in Karbon tab and checks raw response fields too. `bundle.sh` builds the paste. Test clients live in the untracked `config.local.json`.local.json`.
 - First live run on Max's tenant: every read and write check passed, including a minute saved to a throwaway work item, then deleted.
 - Incident: an early ad-hoc test discarded a timer that was running on Max's account. Max was told. The check now touches only a timer it started (matched by initial start time) and stops when anyone else's timer is running.
 - Scheduled task `karbon-endpoint-check` runs daily at 6:00 in Claude's built-in browser, in Auto mode. It never types Karbon passwords; when signed out, it notifies Max.
@@ -65,7 +65,7 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 
 ### 2026-11-09, create work item, test branch (Claude Code)
 - Max asked for a way to create a work item from the Work search when it isn't found. Built on branch `test/create-work-item` as 0.7.41. Not merged, not tagged.
-- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Four test items (Reach Foundation, Abigail Silvers, and Silvers Client Group) were created and then deleted.
+- Captured Karbon's Add Work calls on Max's tenant (`artifacts/capture-summary.md`). One `POST /work/api/{tenant}/workItems` creates it; a minimal body works with or without a template. Four test items were created and then deleted.
 - Every Work list now ends with "+ Create work item". It opens a small form: title (from the search), client (prefilled from Client), and template. The item starts today, is assigned to you, and is picked as if found. Client groups work too (`clientType: "ClientGroup"`), since work can belong to a group (Max).
 - Tested in the browser pane with stubbed Chrome APIs. Not yet loaded as a real extension. Privacy review is in `docs/PRIVACY.md`, with an open item on the policy wording before release.
 
@@ -86,7 +86,6 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - New `site/index.html` (no outside scripts or fonts) and `site/img/`, cropped from the store screenshots. The use-case stories are labeled as typical scenarios, not quotes. Max reviewed the draft.
 - `scripts/privacy-page.sh` now copies `site/` into the Pages build in place of the redirect, and the privacy page links back home. Committed `e3f8de8`, pushed, and deployed by a manual run of the Privacy page workflow. The home page, `/privacy`, the images, and the store link all checked out live.
 - Docs: README, root `CLAUDE.md`, `docs/RELEASING.md`, and `docs/PRIVACY.md` describe `site/`. Any analytics, outside scripts, or forms on the site are now a privacy review trigger.
-- Open: the page says "free" in two places though monetization isn't decided, and it links to an unlisted store listing (waiting on: Max).
 
 ### 2026-11-06, store release, open items, and install connection (Claude Code)
 - Max reported 0.7.37 live and unlisted in the store, tested on the live tenant, and closed most open threads (see Closed on 2026-11-06).
@@ -167,7 +166,7 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 ### 2026-10-24, feedback form (Claude Code)
 - Max chose a Google Form over a Karbon email draft. The draft plan is replaced in `artifacts/feedback-draft-plan.md`.
 - Send feedback opens the form with the version and settings prefilled in its Logs field (`entry.1196218190`). The settings page keeps "Email us instead," the old `mailto:` link.
-- Changed `src/prefs.js`, `src/welcome.html`, and `src/welcome.js`. Updated the privacy policy's Feedback section, the `docs/PRIVACY.md` inventory and review note, and `context/growth.md`.
+- Changed `src/prefs.js`, `src/welcome.html`, and `src/welcome.js`. Updated the privacy policy's Feedback section, the `docs/PRIVACY.md` inventory and review note.
 - Checked with stubbed Chrome APIs: the link opens the live form with the details filled in, line breaks intact. Not submitted, and not tested as a loaded extension.
 - Not committed. It shares the working tree and version 0.7.19 with the signed-out work, so commit these files on their own.
 
@@ -222,5 +221,5 @@ Wait for 0.7.40 to clear review. It goes live on its own (`DEFAULT_PUBLISH`), st
 - Scheduled 0.7.4 to submit once 0.6.1 clears. Moved a settings review note from the project root into `artifacts/`.
 
 ## Earlier summary
-- 2026-10-22: planned the extension and the capture session. Confirmed the extension can call Karbon's internal endpoints from the page with the existing session, and that the websocket is the source of truth for timer state. Chrome Web Store basics: $5 registration, two-extension cap for new publishers, unlisted visibility for testing. Max chose permission marketing through in-extension prompts over a login requirement; no monetization model yet.
+- 2026-10-22: planned the extension and the capture session. Confirmed the extension can call Karbon's internal endpoints from the page with the existing session, and that the websocket is the source of truth for timer state. Chrome Web Store basics: $5 registration, two-extension cap for new publishers, unlisted visibility for testing.
 - 2026-10-23, Claude app sessions: captured Karbon's timer, search, recents, contact, firm settings, and bootstrap endpoints (`artifacts/capture-summary.md`). Built v0.7.0 (blank start and the finish form), v0.7.1 (Preferences regrouped, privacy policy linked), v0.7.2 (account learned from the bootstrap cookie, three-step setup, Connection line), and v0.7.3 (keys read from an open Karbon tab when the cookie read fails, verified on the live tenant). Tested in Chromium against a mock Karbon.

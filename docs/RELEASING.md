@@ -1,5 +1,7 @@
 # Releasing
 
+> Retired 2026-11-19. The extension is unpublished and mothballed. The Release workflow is disabled and `CWS_AUTO_PUBLISH` is `false`. Kept for reference only.
+
 Store item ID: `gnkfhgggnmdfpddfghlhjdmailhbigde`
 Publisher ID: `967ac224-b69a-4e8d-913c-74c12ebee2c5`
 Developer Dashboard: https://chrome.google.com/webstore/devconsole

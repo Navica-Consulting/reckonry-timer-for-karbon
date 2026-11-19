@@ -42,7 +42,7 @@ Google Forms is a new destination, reached through a link that carries data, so 
 ## Step 5: Test and hand over
 - Browser pane: the button opens the form with details filled in, from both the panel and the settings page.
 - Submit one test response and check it lands in the Sheet.
-- Bump `version` in `src/manifest.json`, run `./build.sh`, and update `claude/handoff.md` and `claude/context/growth.md` (the opt-ins now live on the form).
+- Bump `version` in `src/manifest.json`, run `./build.sh`, and update `claude/handoff.md` (the opt-ins now live on the form).
 
 ## Note
 The working tree has uncommitted changes (the shared `src/karbon.js`, and version 0.7.18 in the manifest). Commit those first so this change stays separate.

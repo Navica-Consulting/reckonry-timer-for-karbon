@@ -1,5 +1,7 @@
 # Daily endpoint check
 
+> Retired 2026-11-19. The systemd timer and the Claude scheduled task are disabled. Don't run this check: it calls Karbon's internal endpoints, which Karbon has asked us not to use. Kept for reference only.
+
 The extension uses Karbon's private web API, which can change without notice. This check runs
 the extension's own `src/karbon.js` inside a signed-in Karbon tab, every day, through Playwright, and checks that
 each call still works and still returns the fields the code reads. When something breaks, it
@@ -48,14 +50,13 @@ is needed.
 
    ```json
    { "writes": true,
-     "client": { "name": "Reach Foundation", "key": "<key>", "linkType": "Organization" },
+     "client": { "name": "<client name>", "key": "<key>", "linkType": "Organization" },
      "clients": [ { "name": "...", "key": "<key>", "linkType": "Contact" } ] }
    ```
 
    `client` gets the saved minute; it must be a `Contact` or `Organization`. Leave it null to
    skip that test. `clients` are the work lists to read, ideally a person, an organization,
-   and a client group. Max's test clients (2026-11-09): Reach Foundation, Abigail Silvers, and
-   Silvers Client Group.
+   and a client group. Use throwaway test clients.
 3. Sign in once: `npm run login`. A Chromium window opens. Sign in to Karbon with SSO and tick
    "Stay signed in" if Microsoft asks. The window closes by itself once Karbon loads. It saves:
    - `~/.local/share/reckonry-endpoint-check/profile/`: the Chromium profile, with the Microsoft
