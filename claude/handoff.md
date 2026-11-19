@@ -47,7 +47,7 @@ None. Do no new work here unless Karbon approves a supported path, such as a tim
 - Max confirmed with Karbon that the extension breaks its terms and pulled it from the store. He asked for a Loft feature idea, a mothball, a security check, open sourcing with a do-not-use warning, and a navica.llc tools page update.
 - Loft feature idea with a cover and screenshots: `docs/loft-feature-idea.md`; Max posted it at https://theloft.bykarbon.com/c/feature-request/timer-that-follows-your-work-auto-switch-on-work-and-pause-when-you-re-away. Cover: `store/screenshots/loft-cover.html`, rendered by `render.sh`.
 - Added the README warning, `LICENSE` (MIT), and `CHROMEWEBSTORE.md`; marked `docs/RELEASING.md`, `docs/ENDPOINT-CHECK.md`, and `docs/PRIVACY.md` retired. Removed `renovate.json` and the Claude upgrade workflow, and disabled the Release workflow.
-- The landing page's buttons now point to the Loft feature idea instead of the store, and the navica.llc tool page says Karbon blocked it (navica-marketing PR 129).
+- timer.reckonry.ai is now a short notice that Karbon blocked the extension and forwards to the Loft idea after 8 seconds (old landing page in git history), and the navica.llc tool page says Karbon blocked it (navica-marketing PR 129).
 - Security check before going public: no secrets in history. Removed from the public tip: Karbon contact names, contractor and monetization notes, `claude/context/growth.md`, test client names, and `artifacts/capture-summary.md` (the internal endpoint map). They remain in older commits.
 
 ### 2026-11-10, create work item released as 0.7.41 (Claude Code)
